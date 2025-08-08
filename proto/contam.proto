@@ -24,19 +24,19 @@ package contam;
 // The greeting service definition.
 service ContamServer {
   // Sends a greeting
-  rpc SayContam (ContamRequest) returns (ContamReply) {}
+  rpc RunContam (ContamRequest) returns (ContamReply) {}
 
-  rpc SayContamStreamReply (ContamRequest) returns (stream ContamReply) {}
+  rpc RunContamStreamReply (ContamRequest) returns (stream ContamReply) {}
 
-  rpc SayContamBidiStream (stream ContamRequest) returns (stream ContamReply) {}
+  rpc RunContamBidiStream (stream ContamRequest) returns (stream ContamReply) {}
 }
 
 // The request message containing the user's name.
 message ContamRequest {
-  string name = 1;
+  string prj = 1;
 }
 
 // The response message containing the greetings
 message ContamReply {
-  string message = 1;
+  string stdout = 1;
 }
