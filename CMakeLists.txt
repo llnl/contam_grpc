@@ -16,8 +16,12 @@ set (CXLIB_DIR /app/runContamxDll_OneZoneWthCtm/contamx-artifacts/3.4.1.10/conta
 set(CX_SHARED_LIB_PATH ${CXLIB_DIR})
 
 
+if(DEFINED ENV{gRPC_DIR})
+  message(STATUS "gRPC_DIR: $ENV{gRPC_DIR}")
+  list(APPEND CMAKE_PREFIX_PATH $ENV{gRPC_DIR})
+endif()
 
-include (/app/grpc/examples/cpp/cmake/common.cmake)
+include (grpc.cmake)
 
 # Proto file
 get_filename_component(contam_proto "proto/contam.proto" ABSOLUTE)

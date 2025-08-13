@@ -39,4 +39,5 @@ message ContamRequest {
 // The response message containing the greetings
 message ContamReply {
   string stdout = 1;
+  string stderr = 2;
 }

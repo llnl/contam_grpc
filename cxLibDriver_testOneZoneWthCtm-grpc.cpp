@@ -17,11 +17,15 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <thread> // this_thread
 #include <cstdio> // freopen
 #include <unistd.h> // unlink
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -42,36 +46,56 @@ using contam::ContamServer;
 using contam::ContamReply;
 using contam::ContamRequest;
 
-void runContam(const std::string& prj_file_name, const std::string& out_file_name);
+void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname);
 
 ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
+
+std::string loadFile(const std::string& fname)
+{
+  auto fsize = std::filesystem::file_size(fname);
+  std::string content(fsize, '\0');
+  std::ifstream ifs(fname);
+  ifs.read(&content[0], fsize);
+  ifs.close();
+  return content;
+}
 
 // Logic and data behind the server's behavior.
 class ContamServerServiceImpl final : public ContamServer::Service {
   Status RunContam(ServerContext* context, const ContamRequest* request,
                   ContamReply* reply) override {
     std::string prefix("Contam ");
-    const auto tid = std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
-    std::string prj_fname = "/tmp/contam_" + tid + ".prj";
-    std::string stdout_fname = "/tmp/contam_" + tid + ".out";
+
+#ifdef __linux__
+    const std::string tid_str = std::to_string(syscall(SYS_gettid));
+#else
+    std::ostringstream ss;
+    ss << std::this_thread::get_id();
+    const std::string tid_str = ss.str();
+    //const auto tid = std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
+#endif
+
+    std::string prj_fname = "/tmp/contam_" + tid_str + ".prj";
+    std::string stdout_fname = "/tmp/contam_" + tid_str + ".out";
+    std::string stderr_fname = "/tmp/contam_" + tid_str + ".err";
 
     std::ofstream ofs(prj_fname);
     ofs << request->prj();
     ofs.close();
     std::cout << "Contam project received: " << prj_fname << std::endl;
 
-    runContam(prj_fname, stdout_fname);
+    runContam(prj_fname, stdout_fname, stderr_fname);
 
-    auto fsize = std::filesystem::file_size(stdout_fname);
-    std::string contam_stdout(fsize, '\0');
-    std::ifstream ifs(stdout_fname);
-    ifs.read(&contam_stdout[0], fsize);
-    ifs.close();
+    const auto contam_stdout = loadFile(stdout_fname);
+    const auto contam_stderr = loadFile(stderr_fname);
 
     unlink(prj_fname.c_str());
     unlink(stdout_fname.c_str());
+    unlink(stderr_fname.c_str());
 
     reply->set_stdout(contam_stdout);
+    reply->set_stderr(contam_stderr);
+
     return Status::OK;
   }
 };
@@ -267,9 +291,10 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
   }
 }
 
-void runContam(const std::string& prj_file_name, const std::string& out_file_name)
+void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname)
 {
-  std::freopen(out_file_name.c_str(), "w", stdout);
+  std::freopen(out_fname.c_str(), "w", stdout);
+  std::freopen(err_fname.c_str(), "w", stderr);
 
   enum eSimStage simStage = simStage_Initial;
 
@@ -292,7 +317,7 @@ void runContam(const std::string& prj_file_name, const std::string& out_file_nam
   // Call cxiSetupSimulation() to read the project, set up nodes, links, etc.,
   //  and tell it to use the co-simulation mode which will then cause 
   //  projectDataReady(), function defined above, to be called.
-  cxiSetupSimulation( pCxState, const_cast<char*>(prj_file_name.c_str()), 1 );
+  cxiSetupSimulation( pCxState, const_cast<char*>(prj_fname.c_str()), 1 );
 
   simStage = getStage(pCxState);
   printf("\n==========> 3. simStage = %d\n", simStage);
@@ -358,6 +383,7 @@ void runContam(const std::string& prj_file_name, const std::string& out_file_nam
   printf("\n==========> 5. simStage = %d, stateValid = %d\n", simStage, stateValidity);
 
   std::fclose(stdout);
+  std::fclose(stderr);
 }
 
 /*---------------------------------------------------------------------------*/ 
