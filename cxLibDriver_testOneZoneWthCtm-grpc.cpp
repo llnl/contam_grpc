@@ -15,6 +15,8 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
 
+#include <vector>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -22,7 +24,7 @@
 #include <string>
 #include <thread> // this_thread
 #include <cstdio> // freopen
-#include <unistd.h> // unlink
+#include <unistd.h> // unlink, dup
 #ifdef __linux__
 #include <sys/syscall.h>
 #endif
@@ -46,18 +48,64 @@ using contam::ContamServer;
 using contam::ContamReply;
 using contam::ContamRequest;
 
+
 void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname);
 
 ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
+ABSL_FLAG(std::string, ctm_file_prefix, "/tmp/ctm_", "Prefix of the names of Contam output files");
 
-std::string loadFile(const std::string& fname)
+bool checkFilename(const std::string& filename)
 {
+  std::filesystem::path p(filename);
+  if (p.filename().empty() || p.filename() == "." || p.filename() == "..") {
+    return false;
+  }
+  return true;
+}
+
+std::vector<char> loadFile(const std::string& fname)
+{
+  if (!checkFilename(fname)) {
+    std::cerr << fname + " is not valid a filename!\n";
+    return std::vector<char>{};
+  }
+
   auto fsize = std::filesystem::file_size(fname);
-  std::string content(fsize, '\0');
-  std::ifstream ifs(fname);
+  std::vector<char> content(fsize, 0u);
+  std::ifstream ifs(fname, std::ios_base::in | std::ios_base::binary);
+  if (!ifs) {
+    std::cerr << "Cannot open " + fname + " for reading!\n";
+    return std::vector<char>{};
+  }
   ifs.read(&content[0], fsize);
   ifs.close();
   return content;
+}
+
+/*! Write a binary file */
+size_t writeFile(
+  const std::string& fname,
+  const std::string& content,
+  std::ios_base::openmode mode = std::ios_base::out)
+{
+  if (!checkFilename(fname)) {
+    std::cerr << "Invalid filename: " + fname << std::endl;
+    return static_cast<size_t>(0ul);
+  }
+  std::ofstream ofs(fname, mode | std::ios::binary);
+  if (!ofs) {
+    std::cerr << "Failed to open " << fname << " for writing." << std::endl;
+    return static_cast<size_t>(0ul);
+  }
+  ofs.write(content.data(), content.size());
+  ofs.close();
+  return content.size();
+}
+
+void print(const std::vector<char>& data)
+{
+  std::copy(data.cbegin(), data.cend(), std::ostream_iterator<char>(std::cout, " "));
+  std::cout << std::endl;
 }
 
 // Logic and data behind the server's behavior.
@@ -75,26 +123,78 @@ class ContamServerServiceImpl final : public ContamServer::Service {
     //const auto tid = std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
 #endif
 
-    std::string prj_fname = "/tmp/contam_" + tid_str + ".prj";
-    std::string stdout_fname = "/tmp/contam_" + tid_str + ".out";
-    std::string stderr_fname = "/tmp/contam_" + tid_str + ".err";
+    const std::string uniq_prefix
+      = absl::GetFlag(FLAGS_ctm_file_prefix) + tid_str;
+    std::string prj_fname = uniq_prefix + ".prj";
+    std::string stdout_fname = uniq_prefix + ".out";
+    std::string stderr_fname = uniq_prefix + ".err";
 
-    std::ofstream ofs(prj_fname);
-    ofs << request->prj();
-    ofs.close();
+    writeFile(prj_fname, request->prj());
     std::cout << "Contam project received: " << prj_fname << std::endl;
 
     runContam(prj_fname, stdout_fname, stderr_fname);
-
-    const auto contam_stdout = loadFile(stdout_fname);
-    const auto contam_stderr = loadFile(stderr_fname);
-
     unlink(prj_fname.c_str());
+
+    {
+      const auto content = loadFile(stdout_fname);
+      reply->set_stdout(content.data(), content.size());
+    }
     unlink(stdout_fname.c_str());
+
+    {
+      const auto content = loadFile(stderr_fname);
+      reply->set_stderr(content.data(), content.size());
+    }
     unlink(stderr_fname.c_str());
 
-    reply->set_stdout(contam_stdout);
-    reply->set_stderr(contam_stderr);
+    const std::string ach_fname = uniq_prefix + ".ach";
+    if (request->ach()) {
+      const auto content = loadFile(ach_fname);
+      reply->set_ach(content.data(), content.size());
+    }
+    unlink(ach_fname.c_str());
+
+    const std::string cex_fname = uniq_prefix + ".cex";
+    if (request->cex()) {
+      const auto content = loadFile(cex_fname);
+      reply->set_cex(content.data(), content.size());
+    }
+    unlink(cex_fname.c_str());
+
+    const std::string csm_fname = uniq_prefix + ".csm";
+    if (request->csm()) {
+      const auto content = loadFile(csm_fname);
+      reply->set_csm(content.data(), content.size());
+    }
+    unlink(csm_fname.c_str());
+
+    const std::string log_fname = uniq_prefix + ".log";
+    if (request->log()) {
+      const auto content = loadFile(log_fname);
+      reply->set_log(content.data(), content.size());
+    }
+    unlink(log_fname.c_str());
+
+    const std::string rst_fname = uniq_prefix + ".rst";
+    if (request->rst()) {
+      const auto content = loadFile(rst_fname);
+      reply->set_rst(content.data(), content.size());
+    }
+    unlink(rst_fname.c_str());
+
+    const std::string sim_fname = uniq_prefix + ".sim";
+    if (request->sim()) {
+      const auto content = loadFile(sim_fname);
+      reply->set_sim(content.data(), content.size());
+    }
+    unlink(sim_fname.c_str());
+
+    const std::string xlog_fname = uniq_prefix + ".xlog";
+    if (request->xlog()) {
+      const auto content = loadFile(xlog_fname);
+      reply->set_xlog(content.data(), content.size());
+    }
+    unlink(xlog_fname.c_str());
 
     return Status::OK;
   }
@@ -293,6 +393,8 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
 
 void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname)
 {
+  int saved_stdout = dup(fileno(stdout));
+  int saved_stderr = dup(fileno(stderr));
   std::freopen(out_fname.c_str(), "w", stdout);
   std::freopen(err_fname.c_str(), "w", stderr);
 
@@ -382,8 +484,14 @@ void runContam(const std::string& prj_fname, const std::string& out_fname, const
   simStage = getStage(pCxState);
   printf("\n==========> 5. simStage = %d, stateValid = %d\n", simStage, stateValidity);
 
-  std::fclose(stdout);
-  std::fclose(stderr);
+  std::fflush(stdout);
+  std::fflush(stderr);
+
+  // Restore original stdout
+  dup2(saved_stdout, fileno(stdout));
+  close(saved_stdout);
+  dup2(saved_stderr, fileno(stderr));
+  close(saved_stderr);
 }
 
 /*---------------------------------------------------------------------------*/ 

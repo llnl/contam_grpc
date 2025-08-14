@@ -15,9 +15,12 @@ RUN fakeroot dnf upgrade -y && fakeroot dnf update -y
 RUN fakeroot dnf install -y wget hostname libevent
 RUN fakeroot dnf install -y awk gawk
 RUN fakeroot dnf install -y vim patch wget make cmake gzip git gcc-c++ python3 python3-pip python3-devel
+RUN fakeroot dnf install -y glibc-locale-source
 RUN fakeroot python3 -m pip install --upgrade pip
 RUN fakeroot pip3 install --no-cache-dir cffi numpy pycparser
 RUN fakeroot pip3 install --no-cache-dir grpcio grpcio-tools
+RUN localedef --inputfile=en_US --charmap=UTF-8 en_US.UTF-8
+ENV LANG=en_US.UTF-8
 
 
 # Create shared volume mount point
@@ -41,6 +44,9 @@ RUN fakeroot cmake -DgRPC_INSTALL=ON \
       -DgRPC_SSL_PROVIDER=module      \
       -DgRPC_ZLIB_PROVIDER=module \
       ../.. && fakeroot make -j 8 install && fakeroot make clean
+ENV gRPC_DIR=/app/grpc/install
+ENV PATH=${PATH}:/app/grpc/install/bin
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/app/grpc/install/lib64:/app/grpc/install/lib
 
 RUN fakeroot git clone https://github.com/AMReX-Agent/ExaEpi.git
 RUN fakeroot mkdir -p ExaEpi/build
@@ -79,15 +85,14 @@ RUN mkdir build
 WORKDIR build
 RUN cmake .. && make -j 8
 WORKDIR /app
-RUN pip3 install cffi numpy pycparser contamxpy
+RUN fakeroot pip3 install cffi numpy pycparser contamxpy
 
-RUN export PATH=${PATH}:/app/grpc/install/bin
-RUN export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/app/grpc/install/lib64:/app/grpc/install/lib
 COPY /data/contam-grpc.tgz /app
 WORKDIR /app
-RUN fakeroot tar zxvf contam-grpc.tgz && mkdir -p contam-grpc/build
+RUN fakeroot tar zxvf contam-grpc.tgz --no-same-owner && mkdir -p contam-grpc/build
 WORKDIR /app/contam-grpc/build
-RUN cmake -DCMAKE_PREFIX_PATH="/app/grpc/install/lib64/cmake;/app/grpc/install/lib/cmake" -DCMAKE_INSTALL_PREFIX=/app/contam-grpc/install .. && make -j 4
+RUN cmake -DCMAKE_INSTALL_PREFIX=/app/contam-grpc/install .. && make -j 4 && fakeroot make install
+WORKDIR /app/contam-grpc/install
 
 # Set default command to bash
 ENTRYPOINT ["/bin/bash"]

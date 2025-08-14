@@ -1,17 +1,3 @@
-// Copyright 2015 gRPC authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 syntax = "proto3";
 
 option java_multiple_files = true;
@@ -21,7 +7,7 @@ option objc_class_prefix = "HLW";
 
 package contam;
 
-// The greeting service definition.
+// The Contam service definition.
 service ContamServer {
   // Sends a greeting
   rpc RunContam (ContamRequest) returns (ContamReply) {}
@@ -31,13 +17,27 @@ service ContamServer {
   rpc RunContamBidiStream (stream ContamRequest) returns (stream ContamReply) {}
 }
 
-// The request message containing the user's name.
+// The request message containing the Contam project.
 message ContamRequest {
-  string prj = 1;
+  bytes prj = 1;
+  bool ach = 2;
+  bool cex = 3;
+  bool csm = 4;
+  bool log = 5;
+  bool rst = 6;
+  bool sim = 7;
+  bool xlog = 8;
 }
 
-// The response message containing the greetings
+// The response message from contam simulation service
 message ContamReply {
-  string stdout = 1;
-  string stderr = 2;
+  bytes stdout = 1;
+  bytes stderr = 2;
+  bytes ach = 3;
+  bytes cex = 4;
+  bytes csm = 5;
+  bytes log = 6;
+  bytes rst = 7;
+  bytes sim = 8;
+  bytes xlog = 9;
 }

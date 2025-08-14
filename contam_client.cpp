@@ -77,6 +77,7 @@ class ContamServerClient {
 
     // Act upon its status.
     if (status.ok()) {
+      std::cerr << reply.stderr();
       return reply.stdout();
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
