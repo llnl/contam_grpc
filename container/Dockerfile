@@ -1,32 +1,20 @@
-# Use a base image that includes CUDA drivers
 FROM fedora:latest
-#FROM nvcr.io/nvidia/cuda:12.8.1-cudnn-devel-ubi9
-#FROM quay.io/centos/centos:stream8
 
 # Install necessary dependencies
-
-#ENV ARCH=x86_64
-RUN dnf -y install --skip-unavailable epel-release && dnf -y install fakeroot
-#RUN subscription-manager repos --enable codeready-builder-for-rhel-9-$ARCH-rpms
-#RUN subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
-#RUN dnf -y install --skip-unavailable epel-release
-#RUN dnf -y install fakeroot
+RUN dnf -y install --skip-unavailable epel-release
+RUN dnf -y install fakeroot
 RUN fakeroot dnf upgrade -y && fakeroot dnf update -y
 RUN fakeroot dnf install -y wget hostname libevent
 RUN fakeroot dnf install -y awk gawk
-RUN fakeroot dnf install -y vim patch wget make cmake gzip git gcc-c++ python3 python3-pip python3-devel
+RUN fakeroot dnf install -y vim patch make cmake gzip git gcc-c++ python3 python3-pip python3-devel
 RUN fakeroot dnf install -y glibc-locale-source
 RUN fakeroot python3 -m pip install --upgrade pip
 RUN fakeroot pip3 install --no-cache-dir cffi numpy pycparser
-RUN fakeroot pip3 install --no-cache-dir grpcio grpcio-tools
+RUN fakeroot pip3 install contamxpy
 RUN localedef --inputfile=en_US --charmap=UTF-8 en_US.UTF-8
 ENV LANG=en_US.UTF-8
 
-
-# Create shared volume mount point
-RUN fakeroot mkdir -p /shared
-
-# Download and build ExaEpi
+# Download and build gRPC
 WORKDIR /app
 RUN fakeroot git clone -b v1.73.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc
 WORKDIR /app/grpc
@@ -48,17 +36,14 @@ ENV gRPC_DIR=/app/grpc/install
 ENV PATH=${PATH}:/app/grpc/install/bin
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/app/grpc/install/lib64:/app/grpc/install/lib
 
+# Download and build ExaEpi
 RUN fakeroot git clone https://github.com/AMReX-Agent/ExaEpi.git
-RUN fakeroot mkdir -p ExaEpi/build
-WORKDIR /app/ExaEpi/build
-#RUN fakeroot cmake -DCMAKE_INSTALL_PREFIX=`realpath ..`/install ..
-#RUN fakeroot cmake -DAMReX_GPU_BACKEND=CUDA -DCMAKE_INSTALL_PREFIX=`realpath ..`/install ..
-#RUN fakeroot cmake -DAMReX_GPU_BACKEND=HIP -DAMReX_AMD_ARCH=${AMD_ARCH} -DCMAKE_INSTALL_PREFIX=`realpath ..`/install ..
-#RUN fakeroot make -j 8
 
 # Set working directory
 WORKDIR /app
-COPY *.tar.gz CMakeLists.txt /app
+RUN fakeroot wget http://www.nist.gov/system/files/documents/noindex/2021/11/09/contam-x-3.4.0.1-Linux-64bit.tar.gz
+#RUN fakeroot wget https://files.pythonhosted.org/packages/64/14/bdc628c19fdd0222b2cb2d06b075fe07dbee1770e30dd3cbc720571e05aa/contamxpy-0.0.9.tar.gz
+COPY *.tar.gz /app
 
 # Copy and extract any *.tgz files
 RUN for archive in *.tar.gz; do \
@@ -70,29 +55,12 @@ RUN for archive in *.tar.gz; do \
 
 WORKDIR /app/runContamxDll_OneZoneWthCtm/contamx-artifacts/3.4.1.10
 RUN tar zxvf contam-x-3.4.1.10-Linux-64bit-cxlibShared-debian-bookworm.tar.gz --no-same-owner
-RUN tar zxvf contam-x-3.4.1.10-Linux-64bit-cxlibShared-debian-buster.tar.gz --no-same-owner
-WORKDIR contam-x-3.4.1.10-Linux-64bit-cxlibShared/src-cxlib-examples/example-01
-COPY CMakeLists.txt /app/runContamxDll_OneZoneWthCtm/contamx-artifacts/3.4.1.10/contam-x-3.4.1.10-Linux-64bit-cxlibShared/src-cxlib-examples/example-01
-RUN mkdir build
-WORKDIR build
-RUN cmake .. && make -j 8
-WORKDIR ../../example-02
-# Create CMakeLists.txt based on the one under example-01
-RUN cat ../example-01/CMakeLists.txt | sed -e 's/cxLibDriver_testOneZoneWthCtm/cxLibDriver_testWpcOneFloor/g' > CMakeLists.txt
-# Patch the source to add a missing header
-RUN mv cxLibDriver_testWpcOneFloor.c cxLibDriver_testWpcOneFloor.c.bak && awk  '{ if ($2 ~ /stdlib/) {printf("%s\n#include <string.h>\n", $0)} else print $0}' cxLibDriver_testWpcOneFloor.c.bak > cxLibDriver_testWpcOneFloor.c
-RUN mkdir build
-WORKDIR build
-RUN cmake .. && make -j 8
-WORKDIR /app
-RUN fakeroot pip3 install cffi numpy pycparser contamxpy
+ENV CONTAM_LIB_DIR=/app/runContamxDll_OneZoneWthCtm/contamx-artifacts/3.4.1.10/contam-x-3.4.1.10-Linux-64bit-cxlibShared
+ENV CONTAM_INC_DIR=${CONTAM_LIB_DIR}/include/contam-x-inc
 
-COPY /data/contam-grpc.tgz /app
-WORKDIR /app
-RUN fakeroot tar zxvf contam-grpc.tgz --no-same-owner && mkdir -p contam-grpc/build
-WORKDIR /app/contam-grpc/build
-RUN cmake -DCMAKE_INSTALL_PREFIX=/app/contam-grpc/install .. && make -j 4 && fakeroot make install
-WORKDIR /app/contam-grpc/install
+WORKDIR /app/contam_grpc/build
+RUN cmake -DCMAKE_INSTALL_PREFIX=/app/contam_grpc/install .. && make -j 4 && fakeroot make install
+WORKDIR /app/contam_grpc/install
 
 # Set default command to bash
 ENTRYPOINT ["/bin/bash"]

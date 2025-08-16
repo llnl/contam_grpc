@@ -8,232 +8,26 @@
  *  capabilities of CONTAM.
  */
 #include "contam-x-cosim.h"
+#include "contam_driver.h"
 #include <cstdlib>
 #include <cstring>
-
-#include <grpcpp/ext/proto_server_reflection_plugin.h>
-#include <grpcpp/grpcpp.h>
-#include <grpcpp/health_check_service_interface.h>
-
-#include <vector>
-#include <algorithm>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <memory>
-#include <string>
-#include <thread> // this_thread
 #include <cstdio> // freopen
 #include <unistd.h> // unlink, dup
-#ifdef __linux__
-#include <sys/syscall.h>
-#endif
 
-#include "absl/flags/flag.h"
-#include "absl/flags/parse.h"
-#include "absl/log/initialize.h"
-#include "absl/strings/str_format.h"
+namespace Contam_gRPC {
 
-#ifdef BAZEL_BUILD
-#include "examples/protos/contam.grpc.pb.h"
-#else
-#include "contam.grpc.pb.h"
-#endif
-
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
-using grpc::Status;
-using contam::ContamServer;
-using contam::ContamReply;
-using contam::ContamRequest;
-
-
-void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname);
-
-ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
-ABSL_FLAG(std::string, ctm_file_prefix, "/tmp/ctm_", "Prefix of the names of Contam output files");
-
-bool checkFilename(const std::string& filename)
-{
-  std::filesystem::path p(filename);
-  if (p.filename().empty() || p.filename() == "." || p.filename() == "..") {
-    return false;
-  }
-  return true;
-}
-
-std::vector<char> loadFile(const std::string& fname)
-{
-  if (!checkFilename(fname)) {
-    std::cerr << fname + " is not valid a filename!\n";
-    return std::vector<char>{};
-  }
-
-  auto fsize = std::filesystem::file_size(fname);
-  std::vector<char> content(fsize, 0u);
-  std::ifstream ifs(fname, std::ios_base::in | std::ios_base::binary);
-  if (!ifs) {
-    std::cerr << "Cannot open " + fname + " for reading!\n";
-    return std::vector<char>{};
-  }
-  ifs.read(&content[0], fsize);
-  ifs.close();
-  return content;
-}
-
-/*! Write a binary file */
-size_t writeFile(
-  const std::string& fname,
-  const std::string& content,
-  std::ios_base::openmode mode = std::ios_base::out)
-{
-  if (!checkFilename(fname)) {
-    std::cerr << "Invalid filename: " + fname << std::endl;
-    return static_cast<size_t>(0ul);
-  }
-  std::ofstream ofs(fname, mode | std::ios::binary);
-  if (!ofs) {
-    std::cerr << "Failed to open " << fname << " for writing." << std::endl;
-    return static_cast<size_t>(0ul);
-  }
-  ofs.write(content.data(), content.size());
-  ofs.close();
-  return content.size();
-}
-
-void print(const std::vector<char>& data)
-{
-  std::copy(data.cbegin(), data.cend(), std::ostream_iterator<char>(std::cout, " "));
-  std::cout << std::endl;
-}
-
-// Logic and data behind the server's behavior.
-class ContamServerServiceImpl final : public ContamServer::Service {
-  Status RunContam(ServerContext* context, const ContamRequest* request,
-                  ContamReply* reply) override {
-    std::string prefix("Contam ");
-
-#ifdef __linux__
-    const std::string tid_str = std::to_string(syscall(SYS_gettid));
-#else
-    std::ostringstream ss;
-    ss << std::this_thread::get_id();
-    const std::string tid_str = ss.str();
-    //const auto tid = std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
-#endif
-
-    const std::string uniq_prefix
-      = absl::GetFlag(FLAGS_ctm_file_prefix) + tid_str;
-    std::string prj_fname = uniq_prefix + ".prj";
-    std::string stdout_fname = uniq_prefix + ".out";
-    std::string stderr_fname = uniq_prefix + ".err";
-
-    writeFile(prj_fname, request->prj());
-    std::cout << "Contam project received: " << prj_fname << std::endl;
-
-    runContam(prj_fname, stdout_fname, stderr_fname);
-    unlink(prj_fname.c_str());
-
-    {
-      const auto content = loadFile(stdout_fname);
-      reply->set_stdout(content.data(), content.size());
-    }
-    unlink(stdout_fname.c_str());
-
-    {
-      const auto content = loadFile(stderr_fname);
-      reply->set_stderr(content.data(), content.size());
-    }
-    unlink(stderr_fname.c_str());
-
-    const std::string ach_fname = uniq_prefix + ".ach";
-    if (request->ach()) {
-      const auto content = loadFile(ach_fname);
-      reply->set_ach(content.data(), content.size());
-    }
-    unlink(ach_fname.c_str());
-
-    const std::string cex_fname = uniq_prefix + ".cex";
-    if (request->cex()) {
-      const auto content = loadFile(cex_fname);
-      reply->set_cex(content.data(), content.size());
-    }
-    unlink(cex_fname.c_str());
-
-    const std::string csm_fname = uniq_prefix + ".csm";
-    if (request->csm()) {
-      const auto content = loadFile(csm_fname);
-      reply->set_csm(content.data(), content.size());
-    }
-    unlink(csm_fname.c_str());
-
-    const std::string log_fname = uniq_prefix + ".log";
-    if (request->log()) {
-      const auto content = loadFile(log_fname);
-      reply->set_log(content.data(), content.size());
-    }
-    unlink(log_fname.c_str());
-
-    const std::string rst_fname = uniq_prefix + ".rst";
-    if (request->rst()) {
-      const auto content = loadFile(rst_fname);
-      reply->set_rst(content.data(), content.size());
-    }
-    unlink(rst_fname.c_str());
-
-    const std::string sim_fname = uniq_prefix + ".sim";
-    if (request->sim()) {
-      const auto content = loadFile(sim_fname);
-      reply->set_sim(content.data(), content.size());
-    }
-    unlink(sim_fname.c_str());
-
-    const std::string xlog_fname = uniq_prefix + ".xlog";
-    if (request->xlog()) {
-      const auto content = loadFile(xlog_fname);
-      reply->set_xlog(content.data(), content.size());
-    }
-    unlink(xlog_fname.c_str());
-
-    return Status::OK;
-  }
-};
-
-void RunServer(uint16_t port) {
-  std::string server_address = absl::StrFormat("0.0.0.0:%d", port);
-  ContamServerServiceImpl service;
-
-  grpc::EnableDefaultHealthCheckService(true);
-  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-  ServerBuilder builder;
-  // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  // Register "service" as the instance through which we'll communicate with
-  // clients. In this case it corresponds to an *synchronous* service.
-  builder.RegisterService(&service);
-  // Finally assemble the server.
-  std::unique_ptr<Server> server(builder.BuildAndStart());
-  std::cout << "Server listening on " << server_address << std::endl;
-
-  // Wait for the server to shutdown. Note that some other thread must be
-  // responsible for shutting down the server for this call to ever return.
-  server->Wait();
-}
-
-
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 /* contam-x API driver for test case: testOneZoneWpcUseApi.prj               */
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 
 //---------- Global variables.
 I1 prj_file_name[_MAX_PATH];	// Project file.
 IX envCount;					// Number of envelope paths.
 IX WthCtm_index = 0;
 
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 /* PROJECT-specific data and functions.                                      */
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 // WTH and CTM data for test case testOneZoneWthCtmUseApi.prj.
 //   This PRJ has one contaminant.
 // WTH and CTM data for test case testOneZoneWthCtm-UseApi.prj.
@@ -306,7 +100,7 @@ enum eSimStage getStage(void* state)
 static void errorHandler(void* state, const char* const headerStr, char* const messageStr, int *pNumErrors)
 {
   IX stateValid = cxiIsStateValid(state);
-  char* headers[] = { "NOTE", "WARNING", "ERROR", "FATAL" };
+  const char* headers[] = { "NOTE", "WARNING", "ERROR", "FATAL" };
   printf("stateValid = %d, nErrors = %d, %s:%s", stateValid, *pNumErrors, headerStr, messageStr);
 
   if (strcmp(headerStr, "FATAL") == 0)
@@ -316,9 +110,9 @@ static void errorHandler(void* state, const char* const headerStr, char* const m
   }
 }
 
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 /* Callback projectData function to query contam-x about the project.        */
-/*---------------------------------------------------------------------------*/ 
+/*---------------------------------------------------------------------------*/
 void projectDataReady(void* state, void* pUserData)
 {
   IX numPaths = cxiGetNumPaths( state );
@@ -391,6 +185,7 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
   }
 }
 
+
 void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname)
 {
   int saved_stdout = dup(fileno(stdout));
@@ -417,7 +212,7 @@ void runContam(const std::string& prj_fname, const std::string& out_fname, const
   cxiSetWindPressureMode( pCxState, 0 );
 
   // Call cxiSetupSimulation() to read the project, set up nodes, links, etc.,
-  //  and tell it to use the co-simulation mode which will then cause 
+  //  and tell it to use the co-simulation mode which will then cause
   //  projectDataReady(), function defined above, to be called.
   cxiSetupSimulation( pCxState, const_cast<char*>(prj_fname.c_str()), 1 );
 
@@ -494,18 +289,4 @@ void runContam(const std::string& prj_fname, const std::string& out_fname, const
   close(saved_stderr);
 }
 
-/*---------------------------------------------------------------------------*/ 
-/* main program to drive contam-x-lib.                                       */
-/*---------------------------------------------------------------------------*/ 
-int main(int argc, char** argv)
-{
-  // Project file path is required, so don't allow to proceed if not 
-  //   provided via command line argument.
-//  if (argc < 2)
-//    exit(1);
-
-  absl::ParseCommandLine(argc, argv);
-  absl::InitializeLog();
-
-  RunServer(absl::GetFlag(FLAGS_port));
-}
+} // end of namespace
