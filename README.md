@@ -14,7 +14,7 @@ The follwing steps
 - sets the essential environment variables for the server
   - `CTMX_LIB_DIR`
   - `CTMX_INC_DIR`
-  - These are not needed with `-DCLIENT_ONLY=ON
+  - These are not needed when building client only 
 - sets an optional environment variable
   - `gRPC_DIR`: location of grpc installation. If the path is not specified, or gRPC cannot be found, it will be downloaded and built. gRPC needs to be installed with `ABSL_ENABLE_INSTALL=ON`
 - builds the project and install
@@ -50,7 +50,8 @@ Then, for example, run the client as
 
 Optionally, the following options can be used
 
-``--ctm_stdout_file=ctm.out
+```sh
+  --ctm_stdout_file=ctm.out
   --ctm_stderr_file=ctm.err
   --ctm_of_prefix="ctm/"
   --ctm_ach=true --ctm_cex=true --ctm_csm=true --ctm_log=true --ctm_rst=true --ctm_sim=true --ctm_xlog=true

@@ -5,9 +5,16 @@ cmake_minimum_required(VERSION 3.29)
 ################################################################
 set(SERVER_NAME "contam_server")
 set(CLIENT_NAME "contam_client")
-set(APP_NAME "main_app")
+set(APP_NAME "contam_grpc")
+set(PRJ_NAME "contam_grpc")
 
-project(${APP_NAME} LANGUAGES CXX)
+project(${PRJ_NAME} LANGUAGES CXX)
+
+# Define project version
+set(PRJ_VERSION_MAJOR 0)
+set(PRJ_VERSION_MINOR 1)
+set(PRJ_VERSION_PATCH 0)
+
 
 
 ################################################################
@@ -57,12 +64,12 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "")
 set(CMAKE_INSTALL_RPATH "${CTM_GRPC_INSTALL_LIBDIR}" CACHE STRING "")
 
 list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
-    "${CTM_GRPC_INSTALL_LIBDIR}" _IS_SYSTEM_DIR)
+  "${CTM_GRPC_INSTALL_LIBDIR}" _IS_SYSTEM_DIR)
 
 if (${_IS_SYSTEM_DIR} STREQUAL "-1")
-    # Set the install RPATH correctly
-    list(APPEND CMAKE_INSTALL_RPATH
-      "${CTM_GRPC_INSTALL_LIBDIR}")
+  # Set the install RPATH correctly
+  list(APPEND CMAKE_INSTALL_RPATH
+  "${CTM_GRPC_INSTALL_LIBDIR}")
 endif ()
 
 
@@ -79,14 +86,14 @@ set(contam_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam.pb.h")
 set(contam_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam.grpc.pb.cc")
 set(contam_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam.grpc.pb.h")
 add_custom_command(
-      OUTPUT "${contam_proto_srcs}" "${contam_proto_hdrs}" "${contam_grpc_srcs}" "${contam_grpc_hdrs}"
-      COMMAND ${_PROTOBUF_PROTOC}
-      ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
-        --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-        -I "${contam_proto_path}"
-        --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
-        "${contam_proto}"
-      DEPENDS "${contam_proto}")
+  OUTPUT "${contam_proto_srcs}" "${contam_proto_hdrs}" "${contam_grpc_srcs}" "${contam_grpc_hdrs}"
+  COMMAND ${_PROTOBUF_PROTOC}
+  ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+       --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+       -I "${contam_proto_path}"
+       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+       "${contam_proto}"
+  DEPENDS "${contam_proto}")
 
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
@@ -113,43 +120,13 @@ set_target_properties(contam_grpc_proto PROPERTIES POSITION_INDEPENDENT_CODE TRU
 
 if (NOT CLIENT_ONLY)
   add_executable(${SERVER_NAME}
-  	       "${SERVER_NAME}.cpp"
-                  utils.cpp
-                  contam_driver.cpp
-  	)
+    "${SERVER_NAME}.cpp"
+    utils.cpp
+    contam_driver.cpp)
   
   target_include_directories(${SERVER_NAME} PUBLIC $ENV{CONTAM_INC_DIR})
 
   target_link_libraries(${SERVER_NAME}
-      contam_grpc_proto
-      absl::check
-      absl::flags
-      absl::flags_parse
-      absl::log
-      absl::log_initialize
-      ${_REFLECTION}
-      ${_GRPC_GRPCPP}
-      ${_PROTOBUF_LIBPROTOBUF} ${CONTAM_LIB})
-  
-  set_target_properties(${SERVER_NAME} PROPERTIES
-  	INSTALL_RPATH $ENV{CONTAM_LIB_DIR})
-
-  list(APPEND INSTALL_TARGETS ${SERVER_NAME})
-endif (NOT CLIENT_ONLY)
-
-
-################################################################
-# Build client targets
-################################################################
-
-add_library(${CLIENT_NAME} SHARED "${CLIENT_NAME}.cpp" utils.cpp)
-add_executable(${APP_NAME} "${APP_NAME}.cpp")
-
-if (MPI_CXX_FOUND)
-  target_compile_definitions(${APP_NAME} PRIVATE USE_MPI=1)
-endif()
-
-target_link_libraries(${CLIENT_NAME}
     contam_grpc_proto
     absl::check
     absl::flags
@@ -158,23 +135,109 @@ target_link_libraries(${CLIENT_NAME}
     absl::log_initialize
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
-    ${_PROTOBUF_LIBPROTOBUF})
+    ${_PROTOBUF_LIBPROTOBUF} ${CONTAM_LIB})
+  
+  set_target_properties(${SERVER_NAME} PROPERTIES
+    INSTALL_RPATH $ENV{CONTAM_LIB_DIR})
 
-target_link_libraries(${APP_NAME} ${CLIENT_NAME} MPI::MPI_CXX)
+  list(APPEND INSTALL_TARGETS ${SERVER_NAME})
+endif (NOT CLIENT_ONLY)
+
+
+################################################################
+# Build client library targets
+################################################################
+
+add_library(${CLIENT_NAME} SHARED "${CLIENT_NAME}.cpp" utils.cpp)
+
+target_link_libraries(${CLIENT_NAME}
+  contam_grpc_proto
+  absl::check
+  absl::flags
+  absl::flags_parse
+  absl::log
+  absl::log_initialize
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF})
+
+target_include_directories(${CLIENT_NAME}
+  PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+
+set_target_properties(${CLIENT_NAME} PROPERTIES PUBLIC_HEADER contam_client.h)
+
+
+################################################################
+# Build client user application target
+################################################################
+
+add_executable(${APP_NAME} "${APP_NAME}.cpp")
+
+if (MPI_CXX_FOUND)
+  target_compile_definitions(${APP_NAME} PRIVATE USE_MPI=1)
+  target_link_libraries(${APP_NAME} ${CLIENT_NAME} MPI::MPI_CXX)
+endif()
 
 set_target_properties(${APP_NAME} PROPERTIES
   BUILD_RPATH "$ORIGIN/../lib"
-  INSTALL_RPATH "$ORIGIN/../lib"
-)
+  INSTALL_RPATH "$ORIGIN/../lib")
 
-list(APPEND INSTALL_TARGETS ${APP_NAME} ${CLIENT_NAME})
+list(APPEND INSTALL_TARGETS ${APP_NAME})
 
 
 ################################################################
 # Install
 ################################################################
 
+include(GNUInstallDirs)
+
 install(TARGETS ${INSTALL_TARGETS}
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        PUBLIC_HEADER DESTINATION include)
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(TARGETS ${CLIENT_NAME} contam_grpc_proto
+        EXPORT ContamClientTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT ContamClientTargets
+        FILE ContamClientTargets.cmake
+        NAMESPACE ContamClient::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ContamClient)
+
+
+################################################################
+# Export contam_client libray as package
+################################################################
+
+include(CMakePackageConfigHelpers)
+
+# Construct the full version string
+set(PRJ_VERSION "${PRJ_VERSION_MAJOR}.${PRJ_VERSION_MINOR}.${PRJ_VERSION_PATCH}")
+
+# Define the output path for the version file
+set(PRJ_VERSION_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/ContamClientConfigVersion.cmake")
+
+# Write the basic package version file
+write_basic_package_version_file(
+  "${PRJ_VERSION_FILE_PATH}"
+  VERSION "${PRJ_VERSION}"
+  COMPATIBILITY AnyNewerVersion)
+
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ContamClientConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/ContamClientConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ContamClient)
+
+install(FILES
+          "${CMAKE_CURRENT_BINARY_DIR}/ContamClientConfig.cmake"
+          "${CMAKE_CURRENT_BINARY_DIR}/ContamClientConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ContamClient
+)
