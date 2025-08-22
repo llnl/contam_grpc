@@ -7,7 +7,7 @@ The results are a group of files generated as a result of running a simulation a
 ## Getting started
 
 This codebase includes both the server and the client examples.
-To build only the client part, use the cmake option `-DCLIENT\_ONLY=ON`
+To build only the client part, use the cmake option `-DCLIENT_ONLY=ON`
 
 The follwing steps
 - clones the code
@@ -28,7 +28,7 @@ cd build
 export
 export CTMX_LIB_DIR=<path to libcontamx-lib.{a|so}>
 export CTMX_INC_DIR=<path to libcontamx-lib header>
-cmake -DCMAKE_INSTALL_PREFIX=`realpath ../install` ..
+cmake -DCMAKE_INSTALL_PREFIX=`realpath ..`/install ..
 make -j 4
 make install
 cd ../install/bin

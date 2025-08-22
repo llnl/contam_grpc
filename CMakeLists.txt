@@ -6,8 +6,8 @@ cmake_minimum_required(VERSION 3.29)
 set(SERVER_NAME "contam_server")
 set(CLIENT_NAME "contam_client")
 set(APP_NAME "contam_grpc")
-set(PRJ_NAME "contam_grpc")
 
+set(PRJ_NAME "contam_grpc")
 project(${PRJ_NAME} LANGUAGES CXX)
 
 # Define project version
@@ -37,7 +37,7 @@ if(DEFINED ENV{gRPC_DIR})
   list(APPEND CMAKE_PREFIX_PATH $ENV{gRPC_DIR})
 endif()
 
-include (grpc.cmake)
+include(grpc.cmake)
 
 find_package(MPI)
 
@@ -101,14 +101,14 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-# Buil contam_grpc_proto library
-add_library(contam_grpc_proto
+# Build contam_grpc_proto library
+add_library(contam_grpc_proto STATIC
   ${contam_grpc_srcs}
   ${contam_grpc_hdrs}
   ${contam_proto_srcs}
   ${contam_proto_hdrs})
 
-target_link_libraries(contam_grpc_proto
+target_link_libraries(contam_grpc_proto PRIVATE
   absl::check
   ${_REFLECTION}
   ${_GRPC_GRPCPP}
@@ -126,7 +126,7 @@ if (NOT CLIENT_ONLY)
     "${SERVER_NAME}.cpp"
     utils.cpp
     contam_driver.cpp)
-  
+
   target_include_directories(${SERVER_NAME} PUBLIC $ENV{CONTAM_INC_DIR})
 
   target_link_libraries(${SERVER_NAME} PRIVATE
@@ -139,7 +139,7 @@ if (NOT CLIENT_ONLY)
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF} ${CONTAM_LIB})
-  
+
   set_target_properties(${SERVER_NAME} PROPERTIES
     INSTALL_RPATH $ENV{CONTAM_LIB_DIR})
 
@@ -171,13 +171,16 @@ target_include_directories(${CLIENT_NAME}
 
 set_target_properties(${CLIENT_NAME} PROPERTIES PUBLIC_HEADER contam_client.h)
 
+#set_target_properties(${CLIENT_NAME} PROPERTIES
+#  BUILD_RPATH "$ORIGIN"
+#  INSTALL_RPATH "$ORIGIN")
+
 if (gRPC_INSTALL)
   list(APPEND CONTAM_CLIENT_TARGETS
-    ${CLIENT_NAME}
-    contam_grpc_proto
-    ${_REFLECTION}
-    ${_GRPC_GRPCPP}
-    ${_GRPC_GRPC})
+    ${CLIENT_NAME})
+#    contam_grpc_proto
+#    ${_REFLECTION}
+#    ${_GRPC_GRPCPP})
 else()
   list(APPEND CONTAM_CLIENT_TARGETS
     ${CLIENT_NAME})
