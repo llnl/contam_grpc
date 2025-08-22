@@ -46,6 +46,9 @@ find_package(MPI)
 #  Initialize RPATH
 ################################################################
 
+# Will set global variables such as CMAKE_INSTALL_LIBDIR
+include(GNUInstallDirs)
+
 # Use RPATH on OS X
 if (APPLE)
   set(CMAKE_MACOSX_RPATH ON)
@@ -61,15 +64,15 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 # which point to directories outside the build tree to the install RPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE BOOL "")
 
-set(CMAKE_INSTALL_RPATH "${CTM_GRPC_INSTALL_LIBDIR}" CACHE STRING "")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" CACHE STRING "")
 
 list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
-  "${CTM_GRPC_INSTALL_LIBDIR}" _IS_SYSTEM_DIR)
+  "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" _IS_SYSTEM_DIR)
 
 if (${_IS_SYSTEM_DIR} STREQUAL "-1")
   # Set the install RPATH correctly
   list(APPEND CMAKE_INSTALL_RPATH
-  "${CTM_GRPC_INSTALL_LIBDIR}")
+  "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 endif ()
 
 
@@ -126,7 +129,7 @@ if (NOT CLIENT_ONLY)
   
   target_include_directories(${SERVER_NAME} PUBLIC $ENV{CONTAM_INC_DIR})
 
-  target_link_libraries(${SERVER_NAME}
+  target_link_libraries(${SERVER_NAME} PRIVATE
     contam_grpc_proto
     absl::check
     absl::flags
@@ -140,7 +143,7 @@ if (NOT CLIENT_ONLY)
   set_target_properties(${SERVER_NAME} PROPERTIES
     INSTALL_RPATH $ENV{CONTAM_LIB_DIR})
 
-  list(APPEND INSTALL_TARGETS ${SERVER_NAME})
+  list(APPEND PRJ_INSTALL_TARGETS ${SERVER_NAME})
 endif (NOT CLIENT_ONLY)
 
 
@@ -150,7 +153,7 @@ endif (NOT CLIENT_ONLY)
 
 add_library(${CLIENT_NAME} SHARED "${CLIENT_NAME}.cpp" utils.cpp)
 
-target_link_libraries(${CLIENT_NAME}
+target_link_libraries(${CLIENT_NAME} PRIVATE
   contam_grpc_proto
   absl::check
   absl::flags
@@ -168,6 +171,17 @@ target_include_directories(${CLIENT_NAME}
 
 set_target_properties(${CLIENT_NAME} PROPERTIES PUBLIC_HEADER contam_client.h)
 
+if (gRPC_INSTALL)
+  list(APPEND CONTAM_CLIENT_TARGETS
+    ${CLIENT_NAME}
+    contam_grpc_proto
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_GRPC_GRPC})
+else()
+  list(APPEND CONTAM_CLIENT_TARGETS
+    ${CLIENT_NAME})
+endif()
 
 ################################################################
 # Build client user application target
@@ -178,29 +192,29 @@ add_executable(${APP_NAME} "${APP_NAME}.cpp")
 if (MPI_CXX_FOUND)
   target_compile_definitions(${APP_NAME} PRIVATE USE_MPI=1)
   target_link_libraries(${APP_NAME} ${CLIENT_NAME} MPI::MPI_CXX)
+else()
+  target_link_libraries(${APP_NAME} ${CLIENT_NAME})
 endif()
 
 set_target_properties(${APP_NAME} PROPERTIES
-  BUILD_RPATH "$ORIGIN/../lib"
-  INSTALL_RPATH "$ORIGIN/../lib")
+  BUILD_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}"
+  INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
 
-list(APPEND INSTALL_TARGETS ${APP_NAME})
+list(APPEND PRJ_INSTALL_TARGETS ${APP_NAME})
 
 
 ################################################################
 # Install
 ################################################################
 
-include(GNUInstallDirs)
-
-install(TARGETS ${INSTALL_TARGETS}
+install(TARGETS ${PRJ_INSTALL_TARGETS}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS ${CLIENT_NAME} contam_grpc_proto
+install(TARGETS ${CONTAM_CLIENT_TARGETS}
         EXPORT ContamClientTargets
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
