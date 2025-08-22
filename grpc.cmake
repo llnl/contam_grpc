@@ -23,6 +23,7 @@ if(GRPC_FETCHCONTENT)
   message(STATUS "Installing gRPC via FetchContent.")
   include(FetchContent)
   set(ABSL_ENABLE_INSTALL ON)
+  set(gRPC_INSTALL ON)
   FetchContent_Declare(
     grpc
     GIT_REPOSITORY https://github.com/grpc/grpc.git
