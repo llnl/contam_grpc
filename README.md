@@ -106,7 +106,14 @@ podman run -p 50051:50051 -v $PWD/data:/data --rm -it localhost/contam-grpc
 
 
 ## Requirements
-- contamx C library and headers
+- Contamx C library and headers
+  - Currently, the headers are not publicly available. We assume that the tarball,
+    `runContamxDll_OneZoneWthCtm.tar.gz`, which includes the shared library `libcontamx-lib.so`
+    and headers, is available in the `container` directory where Dockerfile is located.
+    In the Dockerfile, the tarball is extracted and two environment variables, `CONTAM_LIB_DIR`
+    and `CONTAM_INC_DIR`, are set to the directories containing the library and the headers, respectively.
+    Once these components become publicly available, we will update the process to download them from
+    the public repository.
 - gRPC with ABSL component and protobuf (proto3)
 
 
