@@ -22,6 +22,7 @@ set(PRJ_VERSION_PATCH 0)
 ################################################################
 
 option(CLIENT_ONLY "Only build client" OFF)
+option(MPI_CLIENT "Client uses MPI" OFF)
 
 
 ################################################################
@@ -39,7 +40,10 @@ endif()
 
 include(grpc.cmake)
 
-find_package(MPI)
+# For the client example that runs with MPI
+if (MPI_CLIENT)
+  find_package(MPI)
+endif()
 
 
 ################################################################

@@ -4,8 +4,27 @@
 #include <sstream>
 #include <filesystem>
 #include <iterator>
+#ifdef __linux__
+#include <unistd.h>
+#include <sys/syscall.h>
+#endif
 
 namespace Contam_gRPC {
+
+std::string getUniqStr(int rank)
+{
+  const std::string rank_str = std::to_string(rank);
+
+#ifdef __linux__
+  const std::string tid_str = std::to_string(syscall(SYS_gettid));
+#else
+  std::ostringstream ss;
+  ss << std::this_thread::get_id();
+  const std::string tid_str = ss.str();
+#endif
+
+  return (rank_str + "-" + tid_str);
+}
 
 bool checkFilename(const std::string& filename)
 {
@@ -62,6 +81,7 @@ size_t writeFile(
     std::cerr << "Invalid filename: " + fname << std::endl;
     return static_cast<size_t>(0ul);
   }
+
   std::ofstream ofs(fname, mode | std::ios::binary);
   if (!ofs) {
     std::cerr << "Failed to open " << fname << " for writing." << std::endl;
@@ -76,6 +96,100 @@ void print(const std::vector<char>& data)
 {
   std::copy(data.cbegin(), data.cend(), std::ostream_iterator<char>(std::cout, " "));
   std::cout << std::endl;
+}
+
+} // end of namespace
+
+
+#include <fcntl.h>      // open
+#include <libgen.h>     // basename dirname
+#include <sys/stat.h>   // open
+#include <sys/types.h>  // open
+#include <cerrno>
+//#include <climits>
+//#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+namespace Contam_gRPC {
+
+/**
+ * Recursively create a directory
+ * https://stackoverflow.com/questions/2336242/recursive-mkdir-system-call-on-unix
+ */
+int mkpath (const char* dir, const mode_t m)
+{
+    struct stat sb;
+
+    if (!dir) {
+        errno = EINVAL;
+        return 1;
+    }
+
+    if (!stat(dir, &sb))
+        return 0;
+
+    mkpath (dirname(strdupa(dir)), m);
+
+    return mkdir(dir, m);
+}
+
+int mkdir_as_needed(const char* path)
+{
+    if (path == NULL || strlen(path) == 0ul) {
+        fprintf(stderr, "Cannot create a directory with no name\n");
+        return -3;
+    }
+
+    const mode_t m = (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH | S_ISGID);
+    struct stat sb;
+
+    const mode_t RWX_UGO = (S_IRWXU | S_IRWXG | S_IRWXO);
+
+    if (stat(path, &sb) == 0) {          // already exist
+        if (S_ISDIR(sb.st_mode) == 0) {  // not a directory
+            fprintf(stderr, "\"%s\" already exists not as a directory\n", path);
+            return -2;
+        } else if ((sb.st_mode & RWX_UGO) ^ (m & RWX_UGO)) {
+            fprintf(stderr,
+                "Directory \"%s\" already exists with "
+                "different permission bits %o from "
+                "the requested %o\n",
+                path,
+                (sb.st_mode & RWX_UGO),
+                (m & RWX_UGO));
+            return 5;  // already exists but with different mode
+        }
+        return 1;  // already exists
+    }
+    fprintf(stderr, "Creating directory \"%s\"\n", path);
+
+    const mode_t old_mask = umask(0);
+    if (mkpath(path, m) != 0) {
+        if (stat(path, &sb) == 0) {          // already exist
+            if (S_ISDIR(sb.st_mode) == 0) {  // not a directory
+                fprintf(stderr,"\"%s\" already exists not as a directory\n", path);
+                return -4;
+            } else if ((sb.st_mode & RWX_UGO) ^ (m & RWX_UGO)) {
+                fprintf(stderr,
+                    "Directory \"%s\" already exists with "
+                    "different permission bits %o from "
+                    "the requested %o\n",
+                    path,
+                    (sb.st_mode & RWX_UGO),
+                    (m & RWX_UGO));
+                return 5;  // already exists but with different mode
+            }
+            return 1;  // already exists
+        }
+        fprintf(stderr, "Cannot create directory \"%s\": %s\n", path, strerror(errno));
+        perror("mkdir_as_needed() ");
+        return -1;
+    }
+    umask(old_mask);
+
+    return 0;  // The new directory has been succesfully created
 }
 
 } // end of namespace

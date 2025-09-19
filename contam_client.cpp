@@ -29,9 +29,9 @@
 
 ABSL_FLAG(std::string, ctm_target, "localhost:50051", "Server address");
 ABSL_FLAG(std::string, ctm_prj_file, "", "Contam project filename");
-ABSL_FLAG(std::string, ctm_stdout_file, "", "Contam stdout filename");
-ABSL_FLAG(std::string, ctm_stderr_file, "", "Contam stderr filename");
 ABSL_FLAG(std::string, ctm_of_prefix, "", "Prefix to contam output filenames");
+ABSL_FLAG(bool, ctm_out, false, "Write stdout from Contam server into a file .out");
+ABSL_FLAG(bool, ctm_err, false, "Write stderr from Contam server into a file .err");
 ABSL_FLAG(bool, ctm_ach, false, "Retrieve .ach output file from Contam server");
 ABSL_FLAG(bool, ctm_cex, false, "Retrieve .cex output file from Contam server");
 ABSL_FLAG(bool, ctm_csm, false, "Retrieve .csm output file from Contam server");
@@ -52,7 +52,11 @@ namespace Contam_gRPC {
 
 
 struct ContamState {
+  std::string sim_id;
+  std::string of_prefix;
   int rank;
+  bool of_out;
+  bool of_err;
   bool of_ach;
   bool of_cex;
   bool of_csm;
@@ -60,10 +64,6 @@ struct ContamState {
   bool of_rst;
   bool of_sim;
   bool of_xlog;
-  std::string uniq_str;
-  std::string of_prefix;
-  std::string stdout_file;
-  std::string stderr_file;
 
   ContamState();
   void Clear();
@@ -72,40 +72,21 @@ struct ContamState {
 };
 
 ContamState::ContamState()
-: rank(-1), of_ach(false), of_cex(false), of_csm(false),
-  of_log(false), of_rst(false), of_sim(false), of_xlog(false) {}
+: rank(-1), of_out(false), of_err(false), of_ach(false), of_cex(false),
+  of_csm(false), of_log(false), of_rst(false), of_sim(false), of_xlog(false) {}
 
 void ContamState::Clear() {
-  rank = -1;
-  uniq_str.clear();
+  sim_id.clear();
   of_prefix.clear();
-  stdout_file.clear();
-  stderr_file.clear();
+  rank = -1;
 }
 
 void ContamState::InitState(int r) {
-  rank = r;
+  sim_id = getUniqStr(rank = r);
   of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
-  const std::string rank_str = std::to_string(r);
 
-#ifdef __linux__
-  const std::string tid_str = std::to_string(syscall(SYS_gettid));
-#else
-  std::ostringstream ss;
-  ss << std::this_thread::get_id();
-  const std::string tid_str = ss.str();
-#endif
-
-  uniq_str = "." + rank_str + "-" + tid_str;
-
-  stdout_file = absl::GetFlag(FLAGS_ctm_stdout_file);
-  stdout_file = checkFilename(stdout_file)?
-                of_prefix + addStrToFilenameBeforeExt(stdout_file, uniq_str) : "";
-
-  stderr_file = absl::GetFlag(FLAGS_ctm_stderr_file);
-  stderr_file = checkFilename(stderr_file)?
-                of_prefix + addStrToFilenameBeforeExt(stderr_file, uniq_str) : "";
-
+  of_out = absl::GetFlag(FLAGS_ctm_out);
+  of_err = absl::GetFlag(FLAGS_ctm_err);
   of_ach = absl::GetFlag(FLAGS_ctm_ach);
   of_cex = absl::GetFlag(FLAGS_ctm_cex);
   of_csm = absl::GetFlag(FLAGS_ctm_csm);
@@ -118,18 +99,18 @@ void ContamState::InitState(int r) {
 std::string ContamState::to_string() const
 {
   std::string str;
-  str = " - rank: " + std::to_string(rank) + "\n"
+  str = " - sim_id: " + sim_id + "\n"
+      + " - of_prefix: " + of_prefix + "\n"
+      + " - rank: " + std::to_string(rank) + "\n"
+      + " - of_out: " + std::string(of_out ? "true\n" : "false\n")
+      + " - of_err: " + std::string(of_err ? "true\n" : "false\n")
       + " - of_ach: " + std::string(of_ach ? "true\n" : "false\n")
       + " - of_cex: " + std::string(of_cex ? "true\n" : "false\n")
       + " - of_csm: " + std::string(of_csm ? "true\n" : "false\n")
       + " - of_log: " + std::string(of_log ? "true\n" : "false\n")
       + " - of_rst: " + std::string(of_rst ? "true\n" : "false\n")
       + " - of_sim: " + std::string(of_sim ? "true\n" : "false\n")
-      + " - of_xlog: " + std::string(of_xlog? "true\n" : "false\n")
-      + " - uniq_str: " + uniq_str + "\n"
-      + " - of_prefix: " + of_prefix + "\n"
-      + " - stdout_file: " + stdout_file + "\n"
-      + " - stderr_file: " + stderr_file + "\n";
+      + " - of_xlog: " + std::string(of_xlog? "true\n" : "false\n");
   return str;
 }
 
@@ -173,6 +154,7 @@ class ContamServerClient {
 ContamResponse ContamServerClient::RunContam(const std::vector<char>& prj) {
   // Message to send to the server.
   ContamRequest request;
+  request.set_sim_id(ctmState.sim_id);
   request.set_prj(prj.data(), prj.size());
   request.set_ach(ctmState.of_ach);
   request.set_cex(ctmState.of_cex);
@@ -193,23 +175,25 @@ ContamResponse ContamServerClient::RunContam(const std::vector<char>& prj) {
   // The actual RPC
   Status status = stub_->RunContam(&context, request, &reply);
 
+  mkdir_as_needed(ctmState.of_prefix.c_str());
+  const auto uniq_str = ctmState.of_prefix
+    + ((!ctmState.of_prefix.empty() && ctmState.of_prefix.back() != '/')?  "/ctm." : "ctm.")
+    + ctmState.sim_id;
+  std::cout << "prefix of output files: " << uniq_str << std::endl;
 
-  const auto& stdout_file = ctmState.stdout_file;
-  const auto& stderr_file = ctmState.stderr_file;
 
-  if (stdout_file.empty()) {
+  if (ctmState.of_out) {
+    writeFile(uniq_str + ".out", reply.stdout(), std::ios_base::app);
+  } else {
     std::cout << reply.stdout() << std::endl;
-  } else {
-    writeFile(stdout_file, reply.stdout(), std::ios_base::app);
   }
 
-  if (stderr_file.empty()) {
+  if (ctmState.of_err) {
+    writeFile(uniq_str + ".err", reply.stderr(), std::ios_base::app);
+  } else {
     std::cerr << reply.stderr() << std::endl;
-  } else {
-    writeFile(stderr_file, reply.stderr(), std::ios_base::app);
   }
 
-  const auto uniq_str = ctmState.of_prefix + "ctm" + ctmState.uniq_str;
 
   if (reply.ach().size() != 0ul) {
     writeFile(uniq_str + ".ach", reply.ach(), std::ios_base::app);

@@ -6,6 +6,8 @@
 
 namespace Contam_gRPC {
 
+std::string getUniqStr(int rank);
+
 bool checkFilename(const std::string& filename);
 
 /*! \brief Add a string to a filename before extension */
@@ -21,6 +23,8 @@ size_t writeFile(
 
 /*! Print the content of a data */
 void print(const std::vector<char>& data);
+
+int mkdir_as_needed(const char* path);
 
 } // end of namespace
 

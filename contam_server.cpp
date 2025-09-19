@@ -33,7 +33,7 @@ using contam::ContamRequest;
 
 
 ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
-ABSL_FLAG(std::string, ctm_file_prefix, "/tmp/ctm_", "Prefix of the names of Contam output files");
+ABSL_FLAG(std::string, ctm_of_prefix, "/tmp/ctm", "Prefix of the names of Contam output files");
 
 namespace Contam_gRPC {
 
@@ -41,22 +41,18 @@ namespace Contam_gRPC {
 class ContamServerServiceImpl final : public ContamServer::Service {
   Status RunContam(ServerContext* context, const ContamRequest* request,
                   ContamReply* reply) override {
-    std::string prefix("Contam ");
 
-#ifdef __linux__
-    const std::string tid_str = std::to_string(syscall(SYS_gettid));
-#else
-    std::ostringstream ss;
-    ss << std::this_thread::get_id();
-    const std::string tid_str = ss.str();
-    //const auto tid = std::to_string(std::hash<std::thread::id>()(std::this_thread::get_id()));
-#endif
+    const std::string of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
+    mkdir_as_needed(of_prefix.c_str());
 
-    const std::string uniq_prefix
-      = absl::GetFlag(FLAGS_ctm_file_prefix) + tid_str;
-    std::string prj_fname = uniq_prefix + ".prj";
-    std::string stdout_fname = uniq_prefix + ".out";
-    std::string stderr_fname = uniq_prefix + ".err";
+    const auto uniq_str = of_prefix
+      + ((!of_prefix.empty() && of_prefix.back() != '/')?  "/ctm." : "ctm.")
+      + request->sim_id();
+    std::cout << "prefix of output files: " << uniq_str << std::endl;
+
+    std::string prj_fname = uniq_str + ".prj";
+    std::string stdout_fname = uniq_str + ".out";
+    std::string stderr_fname = uniq_str + ".err";
 
     writeFile(prj_fname, request->prj());
     std::cout << "Contam project received: " << prj_fname << std::endl;
@@ -76,49 +72,49 @@ class ContamServerServiceImpl final : public ContamServer::Service {
     }
     unlink(stderr_fname.c_str());
 
-    const std::string ach_fname = uniq_prefix + ".ach";
+    const std::string ach_fname = uniq_str + ".ach";
     if (request->ach()) {
       const auto content = loadFile(ach_fname);
       reply->set_ach(content.data(), content.size());
     }
     unlink(ach_fname.c_str());
 
-    const std::string cex_fname = uniq_prefix + ".cex";
+    const std::string cex_fname = uniq_str + ".cex";
     if (request->cex()) {
       const auto content = loadFile(cex_fname);
       reply->set_cex(content.data(), content.size());
     }
     unlink(cex_fname.c_str());
 
-    const std::string csm_fname = uniq_prefix + ".csm";
+    const std::string csm_fname = uniq_str + ".csm";
     if (request->csm()) {
       const auto content = loadFile(csm_fname);
       reply->set_csm(content.data(), content.size());
     }
     unlink(csm_fname.c_str());
 
-    const std::string log_fname = uniq_prefix + ".log";
+    const std::string log_fname = uniq_str + ".log";
     if (request->log()) {
       const auto content = loadFile(log_fname);
       reply->set_log(content.data(), content.size());
     }
     unlink(log_fname.c_str());
 
-    const std::string rst_fname = uniq_prefix + ".rst";
+    const std::string rst_fname = uniq_str + ".rst";
     if (request->rst()) {
       const auto content = loadFile(rst_fname);
       reply->set_rst(content.data(), content.size());
     }
     unlink(rst_fname.c_str());
 
-    const std::string sim_fname = uniq_prefix + ".sim";
+    const std::string sim_fname = uniq_str + ".sim";
     if (request->sim()) {
       const auto content = loadFile(sim_fname);
       reply->set_sim(content.data(), content.size());
     }
     unlink(sim_fname.c_str());
 
-    const std::string xlog_fname = uniq_prefix + ".xlog";
+    const std::string xlog_fname = uniq_str + ".xlog";
     if (request->xlog()) {
       const auto content = loadFile(xlog_fname);
       reply->set_xlog(content.data(), content.size());

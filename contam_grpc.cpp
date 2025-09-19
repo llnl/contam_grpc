@@ -15,6 +15,7 @@ int main (int argc, char* argv[]) {
 #endif
 
   Contam_gRPC::initContamClientState(my_rank);
+  Contam_gRPC::contamClient();
 
 #if defined(USE_MPI)
   MPI_Finalize();

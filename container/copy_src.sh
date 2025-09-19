@@ -13,6 +13,7 @@ do
   cp $f ${src}
 done
 cp -r proto ${src}
+cp -r cmake ${src}
 popd 2> /dev/null
 tar zcvf `basename ${tarball}`.tar.gz ${tarball}
 rm -rf ${tarball}
