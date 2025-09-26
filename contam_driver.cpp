@@ -244,7 +244,7 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
 
   enum eSimStage simStage = simStage_Initial;
 
-  // Get the project file path from the command line.
+  WthCtm_index = 0;
 
   // Get the ContamXState.
   auto [pCxState, new_state] = get_or_create_state(sim_id);
