@@ -13,15 +13,63 @@
 #include <cstring>
 #include <cstdio> // freopen
 #include <unistd.h> // unlink, dup
+#include <tuple>
+#include <unordered_map>
+#include <mutex>
+#include <shared_mutex>
 
 namespace Contam_gRPC {
+
+using sim_state_map_t = std::unordered_map<std::string, void*>;
+using iter_sim_state = sim_state_map_t::iterator;
+using citer_sim_state = sim_state_map_t::const_iterator;
+sim_state_map_t sim_states;
+std::shared_mutex sim_state_mutex;
+
+#if 1
+/**
+ * return the state and tell whether a new state has been created.
+ */
+std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
+{
+  {
+    std::shared_lock read_lock(sim_state_mutex);
+    citer_sim_state it = sim_states.find(sim_id);
+    if (it != sim_states.cend()) {
+      return {it->second, false};
+    }
+  }
+
+  std::unique_lock write_lock(sim_state_mutex);
+  citer_sim_state it = sim_states.find(sim_id);
+  if (it != sim_states.cend()) {
+    return {it->second, false};
+  }
+
+  void* pCxState = cxiGetContamState();
+  sim_states.emplace(sim_id, pCxState);
+
+  return {pCxState, true};
+}
+#else
+// This is simpler and faster but readers don't run concurrently
+std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
+{
+  std::unique_lock<std::shared_mutex> lock(sim_state_mutext);
+  auto [it, inserted] = sim_states.try_emplace(sim_id, nullptr);
+
+  if (inserted || it->second == nullptr) {
+    it->second = cxiGetContamState();
+  }
+  return {it->second, inserted};
+}
+#endif
 
 /*---------------------------------------------------------------------------*/
 /* contam-x API driver for test case: testOneZoneWpcUseApi.prj               */
 /*---------------------------------------------------------------------------*/
 
 //---------- Global variables.
-I1 prj_file_name[_MAX_PATH];	// Project file.
 IX envCount;					// Number of envelope paths.
 IX WthCtm_index = 0;
 
@@ -186,7 +234,8 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
 }
 
 
-void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname)
+void runContam(const std::string& sim_id, const std::string& prj_fname,
+               const std::string& out_fname, const std::string& err_fname)
 {
   int saved_stdout = dup(fileno(stdout));
   int saved_stderr = dup(fileno(stderr));
@@ -198,7 +247,7 @@ void runContam(const std::string& prj_fname, const std::string& out_fname, const
   // Get the project file path from the command line.
 
   // Get the ContamXState.
-  void *pCxState = cxiGetContamState();
+  auto [pCxState, new_state] = get_or_create_state(sim_id);
 
   simStage = getStage(pCxState);
   printf("\n==========> 1. simStage = %d\n", simStage);

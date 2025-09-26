@@ -20,14 +20,15 @@ service ContamServer {
 // The request message containing the Contam project.
 message ContamRequest {
   string sim_id = 1;
-  bytes prj = 2;
-  bool ach = 3;
-  bool cex = 4;
-  bool csm = 5;
-  bool log = 6;
-  bool rst = 7;
-  bool sim = 8;
-  bool xlog = 9;
+  uint32 sim_step = 2;
+  bytes prj = 3;
+  bool ach = 4;
+  bool cex = 5;
+  bool csm = 6;
+  bool log = 7;
+  bool rst = 8;
+  bool sim = 9;
+  bool xlog = 10;
 }
 
 // The response message from contam simulation service

@@ -4,7 +4,8 @@
 
 namespace Contam_gRPC {
 
-void runContam(const std::string& prj_fname, const std::string& out_fname, const std::string& err_fname);
+void runContam(const std::string& sim_id, const std::string& prj_fname,
+               const std::string& out_fname, const std::string& err_fname);
 
 } // end of namespace
 

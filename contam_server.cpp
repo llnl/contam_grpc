@@ -47,7 +47,7 @@ class ContamServerServiceImpl final : public ContamServer::Service {
 
     const auto uniq_str = of_prefix
       + ((!of_prefix.empty() && of_prefix.back() != '/')?  "/ctm." : "ctm.")
-      + request->sim_id();
+      + request->sim_id() + '.' + std::to_string(request->sim_step());
     std::cout << "prefix of output files: " << uniq_str << std::endl;
 
     std::string prj_fname = uniq_str + ".prj";
@@ -57,7 +57,7 @@ class ContamServerServiceImpl final : public ContamServer::Service {
     writeFile(prj_fname, request->prj());
     std::cout << "Contam project received: " << prj_fname << std::endl;
 
-    runContam(prj_fname, stdout_fname, stderr_fname);
+    runContam(request->sim_id(), prj_fname, stdout_fname, stderr_fname);
     unlink(prj_fname.c_str());
 
     {

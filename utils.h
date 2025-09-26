@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 namespace Contam_gRPC {
 
@@ -25,6 +26,12 @@ size_t writeFile(
 void print(const std::vector<char>& data);
 
 int mkdir_as_needed(const char* path);
+
+inline double get_time() {
+  using namespace std::chrono;
+  return duration_cast<duration<double>>(
+           steady_clock::now().time_since_epoch()).count();
+}
 
 } // end of namespace
 

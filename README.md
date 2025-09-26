@@ -13,8 +13,8 @@ If you want the client to run with MPI, use the cmake option `-DMPI_CLIENT=ON`
 The follwing steps
 - clones the code
 - sets the essential environment variables for the server
-  - `CTMX_LIB_DIR`
-  - `CTMX_INC_DIR`
+  - `CONTAM_LIB_DIR`
+  - `CONTAM_INC_DIR`
   - These are not needed when building only client with `-DCLIENT_ONLY=ON`
 - sets an optional environment variable
   - `gRPC_DIR`: location of grpc installation. If the path is not specified, or gRPC cannot be found, it will be downloaded and built. gRPC needs to be installed with `ABSL_ENABLE_INSTALL=ON`
@@ -26,8 +26,8 @@ git clone https://lc.llnl.gov/gitlab/yeom2/contam_grpc.git
 cd contam_grpc
 mkdir build
 cd build
-export CTMX_LIB_DIR=<path to libcontamx-lib.{a|so}>
-export CTMX_INC_DIR=<path to libcontamx-lib header>
+export CONTAM_LIB_DIR=<path to libcontamx-lib.{a|so}>
+export CONTAM_INC_DIR=<path to libcontamx-lib header>
 export gRPC_DIR=<path to gRPC installation>
 cmake -DCMAKE_INSTALL_PREFIX=`realpath ..`/install ..
 make -j 4

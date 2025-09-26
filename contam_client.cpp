@@ -53,8 +53,9 @@ namespace Contam_gRPC {
 
 struct ContamState {
   std::string sim_id;
-  std::string of_prefix;
+  unsigned int sim_step;
   int rank;
+  std::string of_prefix;
   bool of_out;
   bool of_err;
   bool of_ach;
@@ -72,17 +73,19 @@ struct ContamState {
 };
 
 ContamState::ContamState()
-: rank(-1), of_out(false), of_err(false), of_ach(false), of_cex(false),
+: sim_step(0u), rank(-1), of_out(false), of_err(false), of_ach(false), of_cex(false),
   of_csm(false), of_log(false), of_rst(false), of_sim(false), of_xlog(false) {}
 
 void ContamState::Clear() {
   sim_id.clear();
-  of_prefix.clear();
+  sim_step = 0u;
   rank = -1;
+  of_prefix.clear();
 }
 
 void ContamState::InitState(int r) {
   sim_id = getUniqStr(rank = r);
+  sim_step = 0u;
   of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
 
   of_out = absl::GetFlag(FLAGS_ctm_out);
@@ -100,8 +103,9 @@ std::string ContamState::to_string() const
 {
   std::string str;
   str = " - sim_id: " + sim_id + "\n"
-      + " - of_prefix: " + of_prefix + "\n"
+      + " - sim_step: " + std::to_string(sim_step) + "\n"
       + " - rank: " + std::to_string(rank) + "\n"
+      + " - of_prefix: " + of_prefix + "\n"
       + " - of_out: " + std::string(of_out ? "true\n" : "false\n")
       + " - of_err: " + std::string(of_err ? "true\n" : "false\n")
       + " - of_ach: " + std::string(of_ach ? "true\n" : "false\n")
@@ -178,7 +182,7 @@ ContamResponse ContamServerClient::RunContam(const std::vector<char>& prj) {
   mkdir_as_needed(ctmState.of_prefix.c_str());
   const auto uniq_str = ctmState.of_prefix
     + ((!ctmState.of_prefix.empty() && ctmState.of_prefix.back() != '/')?  "/ctm." : "ctm.")
-    + ctmState.sim_id;
+    + ctmState.sim_id + '.' + std::to_string(ctmState.sim_step);
   std::cout << "prefix of output files: " << uniq_str << std::endl;
 
 

@@ -60,7 +60,8 @@ ENV CONTAM_INC_DIR=${CONTAM_LIB_DIR}/include/contam-x-inc
 
 WORKDIR /app/contam_grpc/build
 RUN cmake -DCMAKE_INSTALL_PREFIX=/app/contam_grpc/install .. && make -j 4 && fakeroot make install
-WORKDIR /app/contam_grpc/install
+WORKDIR /app/contam_grpc/install/bin
+RUN echo 'setl noai nocin nosi inde= paste ruler number' > ~/.vimrc
 
 # Set default command to bash
 ENTRYPOINT ["/bin/bash"]

@@ -1,3 +1,4 @@
+#include "utils.h"
 #include "contam_client.h"
 #if defined(USE_MPI)
 #include <mpi.h>
@@ -14,8 +15,10 @@ int main (int argc, char* argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 #endif
 
+  double t_start = Contam_gRPC::get_time();
   Contam_gRPC::initContamClientState(my_rank);
   Contam_gRPC::contamClient();
+  std::cout << "Time: " << Contam_gRPC::get_time() - t_start << std::endl;
 
 #if defined(USE_MPI)
   MPI_Finalize();

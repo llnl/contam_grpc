@@ -1,4 +1,4 @@
-/*! @file ContamClient.H
+/*! @file contam_client.h
  * \brief Contains the APIs to run Contam client
  */
 
