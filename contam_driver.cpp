@@ -1,14 +1,15 @@
-/** @file cxLibDriver_testOneZoneWthCtm.c 
+/** @file cxLibDriver_testOneZoneWthCtm.c
  *  @example cxLibDriver_testOneZoneWthCtm.c
- *  @brief contam-x-cosim API driver for test case: \b testOneZoneWthCtm-UseApi.prj 
+ *  @brief contam-x-cosim API driver for test case: \b testOneZoneWthCtm-UseApi.prj
  *  \n \n
- *  This test driver implements functions of the contam-x-cosim API related to 
+ *  This test driver implements functions of the contam-x-cosim API related to
  *  infiltration of contaminants through the building envelope. These functions
  *  are akin to the use of the Wind Pressure and Contaminant (WPC) file
  *  capabilities of CONTAM.
  */
 #include "contam-x-cosim.h"
 #include "contam_driver.h"
+#include "contam_ambience.h"
 #include <cstdlib>
 #include <cstring>
 #include <cstdio> // freopen
@@ -17,6 +18,8 @@
 #include <unordered_map>
 #include <mutex>
 #include <shared_mutex>
+
+#define STDIO_REDIRECT 1
 
 namespace Contam_gRPC {
 
@@ -70,65 +73,93 @@ std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
 /*---------------------------------------------------------------------------*/
 
 //---------- Global variables.
-IX envCount;					// Number of envelope paths.
-IX WthCtm_index = 0;
 
 /*---------------------------------------------------------------------------*/
 /* PROJECT-specific data and functions.                                      */
 /*---------------------------------------------------------------------------*/
-// WTH and CTM data for test case testOneZoneWthCtmUseApi.prj.
-//   This PRJ has one contaminant.
-// WTH and CTM data for test case testOneZoneWthCtm-UseApi.prj.
-//   This PRJ has one contaminant.
-// time in seconds.
-//                 00:00,   05:00,     05:05,     06:05,     06:10,     14:00,  14:05,  16:00,  16:05,  23:00,  23:05,  24:00
-IX times[]  =   {      0,   18000,     18300,     21900,     22200,     50400,  50700,  57600,  57900,  82800,  83100,  86400};
-// T[]  temperature, K.
-R8 Tambt[]  =   { 293.15,  293.15,    293.15,    293.15,    293.15,    293.15, 293.15, 293.15, 293.15, 293.15, 293.15, 293.15};
-// P[]  barometric pressure, Pa.
-R8 Pambt[]  =   {101325,   101325,    101325,    101325,    101325,    101325, 101325, 101325, 101325, 101325, 101325, 101325};
-// WS[] wind speed, m/s.
-R8 WSambt[] =   {   0.0,      0.0,       0.0,     7.397,     7.397,     7.397,    0.0,    0.0,  7.397,  7.397,    0.0,    0.0};
-// WD[] wind direction, degree.
-R8 WDambt[] =   {   0.0,      0.0,       0.0,     270.0,     270.0,     270.0,    0.0,    0.0,   90.0,   90.0,    0.0,    0.0};
-// Mf[] mass fraction, kgc/kga.
-R8 MFambt[] =   {    0.0,     0.0, 0.0023254, 0.0023254, 0.0023254, 0.0023254,    0.0,    0.0,   0.00,    0.0,     0.0,   0.0};
 
-// Set the inital conditions for the SetAmbt API test.
-void setWthCtmInit( void *state )
+AmbienceSample amb_samples[] =
 {
-  if( cxiSetAmbtTemperature( state, (R4)Tambt[0] ) )
-    exit(2);
-  if( cxiSetAmbtPressure( state, (R4)Pambt[0] ) )
-    exit(3);
-  if( cxiSetAmbtWndSpd( state, (R4)WSambt[0] ) )
-    exit(4);
-  if( cxiSetAmbtWndDir( state, (R4)WDambt[0] ) )
-    exit(5);
-  if( cxiSetAmbtMassFraction( state, 0, MFambt[0] ) )
-    exit(6);
-  ++WthCtm_index;
-}
+  {    0, 293.15, 101325,   0.0,   0.0, 0.0}, // 00:00
+  {18000, 293.15, 101325,   0.0,   0.0, 0.0}, // 05:00
+  {18300, 293.15, 101325,   0.0,   0.0, 0.0023254}, // 05:05
+  {21900, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 06:05
+  {22200, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 06:10
+  {50400, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 14:00
+  {50700, 293.15, 101325,   0.0,   0.0, 0.0}, // 14:05
+  {57600, 293.15, 101325,   0.0,   0.0, 0.0}, // 16:00
+  {57900, 293.15, 101325, 7.397,  90.0, 0.0}, // 16:05
+  {82800, 293.15, 101325, 7.397,  90.0, 0.0}, // 23:00
+  {83100, 293.15, 101325,   0.0,   0.0, 0.0}, // 23:05
+  {86400, 293.15, 101325,   0.0,   0.0, 0.0}  // 24:00
+};
 
-// Update conditions when appropriate.
-void setWthCtm( void* state, IX currentTime, IX currentDate, IX simTimeStep )
+#define CTM_DT2SEC(_CTM_DATE_,_CTM_TIME_) (((_CTM_DATE_)-1) * 86400 + (_CTM_TIME_))
+struct SimTime {
+  IX step_size;
+  IX sim_begin;
+  IX sim_end;
+  IX duration;
+  IX num_steps;
+
+  void set(void*);
+  std::string to_string() const;
+};
+
+void SimTime::set(void* state)
 {
-  // Check if it's time to change to the next set of Ambient data.
-  if (currentTime + simTimeStep == times[WthCtm_index])
-  {
-    if( cxiSetAmbtTemperature( state, (R4)Tambt[WthCtm_index] ) )
-      exit( 2 );
-    if( cxiSetAmbtPressure( state, (R4)Pambt[WthCtm_index] ) )
-      exit( 3 );
-    if( cxiSetAmbtWndSpd( state, (R4)WSambt[WthCtm_index] ) )
-      exit( 4 );
-    if( cxiSetAmbtWndDir( state, (R4)WDambt[WthCtm_index] ) )
-      exit( 5 );
-    if( cxiSetAmbtMassFraction( state, 0, MFambt[WthCtm_index] ) )
-      exit( 6 );
-    ++WthCtm_index;
+  if (state == nullptr) {
+    return;
   }
+
+  step_size = cxiGetSimulationTimeStep(state);
+
+  IX start_date = cxiGetSimulationStartDate(state);
+  IX start_time = cxiGetSimulationStartTime(state);
+  IX end_date = cxiGetSimulationEndDate(state);
+  IX end_time = cxiGetSimulationEndTime(state);
+
+  // express beginning and end of simulation in seconds
+  sim_begin = CTM_DT2SEC(start_date, start_time);
+  sim_end = CTM_DT2SEC(end_date, end_time);
+
+  // Calculate the simulation duration in seconds.
+  if (sim_begin < sim_end) {
+    duration = sim_end - sim_begin;
+  } else {
+    duration = 365 * 86400 + sim_end - sim_begin;
+  }
+
+  // Calculate the number of steps to reach the end of the simulation.
+  num_steps = duration / step_size;
 }
+
+std::string SimTime::to_string() const
+{
+  return
+    " - step_size: " + std::to_string(step_size) + "\n"
+    " - sim_begin: " + std::to_string(sim_begin) + "\n"
+    " - sim_end: " + std::to_string(sim_end) + "\n"
+    " - duration: " + std::to_string(duration) + "\n"
+    " - num_steps: " + std::to_string(num_steps);
+}
+
+/// Set the ambience conditions using the SetAmbt API.
+void setWthCtm( void *state, const AmbienceSample& amb )
+{
+  if( cxiSetAmbtTemperature( state, (R4) amb.temperature ) )
+    exit(2);
+  if( cxiSetAmbtPressure( state, (R4) amb.pressure ) )
+    exit(3);
+  if( cxiSetAmbtWndSpd( state, (R4) amb.wind_speed ) )
+    exit(4);
+  if( cxiSetAmbtWndDir( state, (R4) amb.wind_direction ) )
+    exit(5);
+  if( cxiSetAmbtMassFraction( state, 0, amb.mass_fraction ) )
+    exit(6);
+}
+
+  // Check if it's time to change to the next set of Ambient data.
 
 /*---------------------------------------------------------------------------*/
 /* Get simulation stage and print corresponding string.                      */
@@ -169,7 +200,7 @@ void projectDataReady(void* state, void* pUserData)
   enum eSimStage myStage = getStage(state);
   printf("\n==========> 2. simStage = %d\n", myStage);
 
-  envCount = 0;
+  IX envCount = 0;
   for (IX i = 1; i <= numPaths; ++i)
   {
     if( cxiGetPathInfo( state, i, &pathDesc ) )
@@ -210,12 +241,9 @@ void projectDataReady(void* state, void* pUserData)
     IX zoneNr = cxiGetZoneNumber( state, zDesc.name, zDesc.level_nr, &zoneNumber );
     printf("\tReverse check using cxiGetZoneNumber(%s, %d) => %d\n", zDesc.name, zDesc.level_nr, zoneNumber);
   }
-
-  // Set initial Ambient conditions.
-  setWthCtmInit( state );
 }
 
-void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
+void getZoneMf( void* state, IX date, IX time, IX nz, IX nc)
 {
   for(IX z = 1; z <= nz; ++z)
   {
@@ -233,21 +261,32 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc )
   }
 }
 
-
 void runContam(const std::string& sim_id, const std::string& prj_fname,
                const std::string& out_fname, const std::string& err_fname)
 {
+#if defined(STDIO_REDIRECT)
   int saved_stdout = dup(fileno(stdout));
   int saved_stderr = dup(fileno(stderr));
   std::freopen(out_fname.c_str(), "w", stdout);
   std::freopen(err_fname.c_str(), "w", stderr);
+#endif
 
   enum eSimStage simStage = simStage_Initial;
 
-  WthCtm_index = 0;
-
   // Get the ContamXState.
   auto [pCxState, new_state] = get_or_create_state(sim_id);
+  AmbienceData amb;
+  auto& amb_data = amb.data();
+  amb_data.insert(amb_data.end(), amb_samples, amb_samples+sizeof(amb_samples)/sizeof(amb_samples[0]));
+  amb.init();
+#if 0
+  printf("{\n");
+  const auto& amb_const_data = const_cast<const AmbienceData&>(amb).data();
+  for (const auto& s: amb_const_data) {
+    printf("%s\n", s.to_string().c_str());
+  }
+  printf("}\n");
+#endif
 
   simStage = getStage(pCxState);
   printf("\n==========> 1. simStage = %d\n", simStage);
@@ -266,58 +305,52 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   cxiSetupSimulation( pCxState, const_cast<char*>(prj_fname.c_str()), 1 );
 
   simStage = getStage(pCxState);
+
   printf("\n==========> 3. simStage = %d\n", simStage);
 
-  // Get project information needed for this case.
-  IX numZones = cxiGetNumZones( pCxState );
-  IX numContams = cxiGetNumCtms( pCxState );
-
   // Get simulation timing information.
-  IX simTimeStep = cxiGetSimulationTimeStep( pCxState );
-  IX simStartDate = cxiGetSimulationStartDate( pCxState );
-  IX simStartTime = cxiGetSimulationStartTime( pCxState );
-  IX simEndDate = cxiGetSimulationEndDate( pCxState );
-  IX simEndTime = cxiGetSimulationEndTime( pCxState );
-
-  IX simBegin = (simStartDate - 1) * 86400 + simStartTime;
-  IX simEnd = (simEndDate - 1) * 86400 + simEndTime;
-
-  // Calculate the simulation duration in seconds.
-  IX simDuration;
-  if (simBegin < simEnd)
-    simDuration = simEnd - simBegin;
-  else
-    simDuration = 365 * 86400 - simEnd + simBegin;
-
-  // Calculate the number of steps to reach the end of the simulation.
-  IX numTimeSteps = simDuration / simTimeStep;
+  SimTime simTime;
+  simTime.set(pCxState);
+  //printf("%s\n", simTime.to_string().c_str());
 
   // Get the current date/time after initial steady state simulation.
-  IX currentTime = cxiGetCurrentTime( pCxState );
-  IX currentDate = cxiGetCurrentDate( pCxState );
+  IX currTime = cxiGetCurrentTime(pCxState);
+  IX currDate = cxiGetCurrentDate(pCxState);
+
+  // Set initial Ambient conditions.
+  IX t_curr = CTM_DT2SEC(currDate, currTime);
+  [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
+  if (!found_init) {
+    fprintf(stderr, "Initial ambience condition is missing for date %d time %d.\n", currDate, currTime);
+  } else {
+    setWthCtm(pCxState, amb_init);
+  }
+
+  // Get project information needed for this case.
+  const IX numZones = cxiGetNumZones(pCxState);
+  const IX numContams = cxiGetNumCtms(pCxState);
 
   // Get initial zone mass fractions.
-  getZoneMf( pCxState, currentDate, currentTime, numZones, numContams );
+  getZoneMf(pCxState, currDate, currTime, numZones, numContams );
 
-  // Loop through the simulation one time step at a time.
-  for (int i = 0; i < numTimeSteps; ++i)
-  {
-    // Tasks to perform before current time step.
+  // Run through the simulation one time step at a time.
+  while (t_curr < simTime.sim_end) {
+    t_curr += simTime.step_size;
+    auto [amb_curr, found, updated] = amb.get_sample(t_curr);
+    if (updated) {
+      setWthCtm(pCxState, amb_curr);
+      //printf("%s\n", amb_now.to_string().c_str());
+    }
+    // Run next time step.
+    cxiDoCoSimStep(pCxState, 1);
 
-    setWthCtm( pCxState, currentTime, currentDate, simTimeStep);
-
-    // Run current time step.
-    cxiDoCoSimStep( pCxState, 1 );
-
-    // Tasks to perform after current time step.
-    // Get new date/time.
-    currentTime = cxiGetCurrentTime( pCxState );
-    currentDate = cxiGetCurrentDate( pCxState );
+    currTime = cxiGetCurrentTime(pCxState);
+    currDate = cxiGetCurrentDate(pCxState);
 
     // Get zone mass fractions.
-    getZoneMf( pCxState, currentDate, currentTime, numZones, numContams );
-
+    getZoneMf(pCxState, currDate, currTime, numZones, numContams);
   }
+
   simStage = getStage(pCxState);
   printf("\n==========> 4. simStage = %d\n", simStage);
   if (simStage == simStage_End) {
@@ -331,11 +364,13 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   std::fflush(stdout);
   std::fflush(stderr);
 
+#if defined(STDIO_REDIRECT)
   // Restore original stdout
   dup2(saved_stdout, fileno(stdout));
   close(saved_stdout);
   dup2(saved_stderr, fileno(stderr));
   close(saved_stderr);
+#endif
 }
 
 } // end of namespace
