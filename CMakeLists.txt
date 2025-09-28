@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.22)
 
 ################################################################
 #  Name of this driver project/program
@@ -129,6 +129,7 @@ if (NOT CLIENT_ONLY)
   add_executable(${SERVER_NAME}
     "${SERVER_NAME}.cpp"
     utils.cpp
+    contam_ambience.cpp
     contam_driver.cpp)
 
   target_include_directories(${SERVER_NAME} PUBLIC $ENV{CONTAM_INC_DIR})
