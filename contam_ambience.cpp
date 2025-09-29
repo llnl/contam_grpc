@@ -6,22 +6,36 @@
 #include <vector>
 #include <algorithm>
 #include <tuple>
-#include "types.h" // Contam types: IX = int32_t, R8 = double
-#include "contam_ambience.h"
 #include <cstdlib> // abort
+#include "contam_ambience.h"
 
 namespace Contam_gRPC {
+
+AmbienceSample::AmbienceSample()
+  : time(0), temperature(0.0), pressure(0.0), wind_speed(0.0),
+    wind_direction(0.0), mass_fraction(0.0) {}
+
+AmbienceSample::AmbienceSample(CTM_IX time, CTM_R8 temp, CTM_R8 pres, CTM_R8 wind_spd, CTM_R8 wind_dir, CTM_R8 mf)
+  : time(time),
+    temperature(temperature),
+    pressure(pressure),
+    wind_speed(wind_speed),
+    wind_direction(wind_direction),
+    mass_fraction(mass_fraction)
+{}
 
 std::string AmbienceSample::to_string() const
 {
   using std::to_string;
-  return " {" + to_string(time) + ", "
-              + to_string(temperature) + ", "
-              + to_string(pressure) + ", "
-              + to_string(wind_speed) + ", "
-              + to_string(wind_direction) + ", "
-              + to_string(mass_fraction) + "}";
+  return
+    "{time: " + to_string(time) +
+    ", temparature: " + to_string(temperature) +
+    ", pressure: " + to_string(pressure) +
+    ", wind_speed: " + to_string(wind_speed) +
+    ", wind_direction: " + to_string(wind_direction) +
+    ", mass_fraction: " + to_string(mass_fraction) + "}";
 }
+
 
 AmbienceData::AmbienceData()
 : m_initialized(false), m_been_found(false)
@@ -64,9 +78,9 @@ void AmbienceData::insert(AmbienceSample&& s)
   m_data.emplace_back(std::move(s));
 }
 
-std::tuple<AmbienceSample, bool, bool> AmbienceData::get_sample(const IX t)
+std::tuple<AmbienceSample, bool, bool> AmbienceData::get_sample(const CTM_IX t)
 {
-  const IX t_curr = m_curr->time;
+  const CTM_IX t_curr = m_curr->time;
   if ((m_data.size() == 0ul) || (t < t_curr)) { // also !m_initialized
     return {AmbienceSample{}, false, false};
   }

@@ -19,13 +19,14 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 
-#ifdef BAZEL_BUILD
-#include "examples/protos/contam.grpc.pb.h"
-#else
+//#ifdef BAZEL_BUILD
+//#include "examples/protos/contam.grpc.pb.h"
+//#else
 #include "contam.grpc.pb.h"
-#endif
+//#endif
 
 #include "contam_client.h"
+#include "contam_params.h"
 
 ABSL_FLAG(std::string, ctm_target, "localhost:50051", "Server address");
 ABSL_FLAG(std::string, ctm_prj_file, "", "Contam project filename");

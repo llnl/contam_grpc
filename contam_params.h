@@ -1,26 +1,16 @@
-/*! @file contam_sim_params.h
+/*! @file contam_params.h
  * \brief Contam simulation and client parameters
  */
 
-#ifndef CONTAM_GRPC_CONTAM_SIM_PARAMS_H
-#define CONTAM_GRPC_CONTAM_SIM_PARAMS_H
+#ifndef CONTAM_GRPC_CONTAM_PARAMS_H
+#define CONTAM_GRPC_CONTAM_PARAMS_H
 
 #include <string>
 #include <tuple>
 #include <vector>
+#include "contam_ambience.h"
 
 namespace Contam_gRPC {
-
-struct AmbienceSample {
-  int time;
-  double temperature;
-  double pressure;
-  double wind_speed;
-  double wind_direction;
-  double mass_fraction;
-
-  std::string to_string() const;
-};
 
 struct ContamParams {
   std::string prj_filename; ///< Contam project filename
@@ -50,4 +40,4 @@ read_proto_params(const std::string& filename, bool verbose);
 
 } // end of namespace
 
-#endif // CONTAM_GRPC_CONTAM_SIM_PARAMS_H
+#endif // CONTAM_GRPC_CONTAM_PARAMS_H

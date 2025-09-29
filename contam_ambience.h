@@ -9,39 +9,48 @@
 #include <vector>
 #include <algorithm>
 #include <tuple>
+#if !defined(CLIENT_ONLY) || (CLIENT_ONLY == 0)
 #include "types.h" // Contam types: IX = int32_t, R8 = double
+#endif
 
 namespace Contam_gRPC {
 
+#ifdef TYPES_H // contamx types.h is included
+using CTM_IX = IX;
+using CTM_R8 = R8;
+#else
+using CTM_IX = int32_t;
+using CTM_R8 = double;
+#endif
+
 /*! \brief Contam ambience sample at a specific time */
 struct AmbienceSample {
-  IX time; ///< in second
-  R8 temperature; ///< in K
-  R8 pressure; ///< barometric pressure in Pa
-  R8 wind_speed; ///< in m/s
-  R8 wind_direction; ///< in degree
-  R8 mass_fraction; ///< in kgc/kga
+  CTM_IX time; ///< in second
+  CTM_R8 temperature; ///< in K
+  CTM_R8 pressure; ///< barometric pressure in Pa
+  CTM_R8 wind_speed; ///< in m/s
+  CTM_R8 wind_direction; ///< in degree
+  CTM_R8 mass_fraction; ///< in kgc/kga
 
-  AmbienceSample()
-    : time(0), temperature(0.0), pressure(0.0), wind_speed(0.0),
-      wind_direction(0.0), mass_fraction(0.0) {}
-
-  AmbienceSample(IX time, R8 temp, R8 pres, R8 wind_spd, R8 wind_dir, R8 mf)
-    : time(time), temperature(temp), pressure(pres), wind_speed(wind_spd),
-      wind_direction(wind_dir), mass_fraction(mf) {}
+  AmbienceSample();
+  AmbienceSample(CTM_IX time, CTM_R8 temp, CTM_R8 pres, CTM_R8 wind_spd, CTM_R8 wind_dir, CTM_R8 mf);
+  AmbienceSample(const AmbienceSample& other) = default;
+  AmbienceSample(AmbienceSample&& other) = default;
+  AmbienceSample& operator=(const AmbienceSample& other) = default;
+  AmbienceSample& operator=(AmbienceSample&& other) = default;
 
   bool operator<(const AmbienceSample& other) const {
     return (time < other.time);
   }
 
-  bool operator<(const IX t) const {
+  bool operator<(const CTM_IX t) const {
     return (time < t);
   }
 
   std::string to_string() const;
 };
 
-inline bool operator<(const IX t, const AmbienceSample& s) {
+inline bool operator<(const CTM_IX t, const AmbienceSample& s) {
   return (t < s.time);
 }
 
@@ -69,7 +78,7 @@ class AmbienceData {
 
     /** Return the last known abience sample earlier than or equal to t.
         Also, indicate where a sample was found and if a new sample was found */
-    std::tuple<AmbienceSample, bool, bool> get_sample(const IX t);
+    std::tuple<AmbienceSample, bool, bool> get_sample(const CTM_IX t);
 };
 
 } // end of namespace

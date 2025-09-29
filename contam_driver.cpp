@@ -336,7 +336,7 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   // Run through the simulation one time step at a time.
   while (t_curr < simTime.sim_end) {
     t_curr += simTime.step_size;
-    auto [amb_curr, found, updated] = amb.get_sample(t_curr);
+    [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
     if (updated) {
       setWthCtm(pCxState, amb_curr);
       //printf("%s\n", amb_now.to_string().c_str());

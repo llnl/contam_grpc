@@ -81,6 +81,27 @@ endif ()
 
 
 ################################################################
+#  Protocol buffer for contam_params  messages
+################################################################
+
+get_filename_component(contam_params_proto "proto/contam_params.proto" ABSOLUTE)
+get_filename_component(contam_params_proto_path "${contam_params_proto}" PATH)
+
+# Generated sources
+set(contam_params_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam_params.pb.cc")
+set(contam_params_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam_params.pb.h")
+add_custom_command(
+  OUTPUT "${contam_params_proto_srcs}" "${contam_params_proto_hdrs}"
+  COMMAND ${_PROTOBUF_PROTOC}
+  ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+       --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+       -I "${contam_params_proto_path}"
+       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+       "${contam_params_proto}"
+  DEPENDS "${contam_params_proto}")
+
+
+################################################################
 #  Protocol buffer for gRPC messages
 ################################################################
 
@@ -105,12 +126,18 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-# Build contam_grpc_proto library
+
+################################################################
+#  Build contam_grpc_proto library
+################################################################
+
 add_library(contam_grpc_proto STATIC
   ${contam_grpc_srcs}
   ${contam_grpc_hdrs}
   ${contam_proto_srcs}
-  ${contam_proto_hdrs})
+  ${contam_proto_hdrs}
+  ${contam_params_proto_srcs}
+  ${contam_params_proto_hdrs})
 
 target_link_libraries(contam_grpc_proto PRIVATE
   absl::check
@@ -156,7 +183,15 @@ endif (NOT CLIENT_ONLY)
 # Build client library targets
 ################################################################
 
-add_library(${CLIENT_NAME} SHARED "${CLIENT_NAME}.cpp" utils.cpp)
+add_library(${CLIENT_NAME} SHARED
+           "${CLIENT_NAME}.cpp"
+            contam_params.cpp
+            contam_ambience.cpp
+            utils.cpp)
+
+if (CLIENT_ONLY)
+  target_compile_definitions(${CLIENT_NAME} PRIVATE CLIENT_ONLY=1)
+endif()
 
 target_link_libraries(${CLIENT_NAME} PRIVATE
   contam_grpc_proto
@@ -171,6 +206,7 @@ target_link_libraries(${CLIENT_NAME} PRIVATE
 
 target_include_directories(${CLIENT_NAME}
   PUBLIC
+  $ENV{CONTAM_INC_DIR}
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
