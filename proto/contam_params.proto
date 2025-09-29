@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package contam;
+
+message Sim_Params {
+  message Contam_Params {
+    message AmbienceSample {
+      int32 time = 1; ///< in second
+      double temparature = 2; ///< in K
+      double pressure = 3; ///< in Pa
+      double wind_speed = 4; ///< in m/s
+      double wind_direction = 5; ///< in degree
+      double mass_fraction = 6; ///< in kgc/kga
+    }
+
+    string prj_filename = 1; ///< Contam project filename
+    repeated AmbienceSample amb_series = 2; ///< Ambience timeseries
+  }
+
+  message Client_Params {
+    bool of_out = 1; ///< Whether to write stdout from Contam server into a file
+    bool of_err = 2; ///< Whether to write stderr from Contam server into a file
+    bool of_ach = 3; ///< Whether to retrieve .ach output file from Contam server
+    bool of_cex = 4; ///< Whether to retrieve .cex output file from Contam server
+    bool of_csm = 5; ///< Whether to retrieve .csm output file from Contam server
+    bool of_log = 6; ///< Whether to retrieve .log output file from Contam server
+    bool of_rst = 7; ///< Whether to retrieve .rst output file from Contam server
+    bool of_sim = 8; ///< Whether to retrieve .sim output file from Contam server
+    bool of_xlog = 9; ///< Whether to retrieve .xlog output file from Contam server
+    string of_prefix = 10; ///< prefix path to the contam output files
+    string server_addr = 11; ///< hostname:port of the server
+  }
+
+  Contam_Params contam_params = 1;
+  Client_Params client_params = 2;
+}
