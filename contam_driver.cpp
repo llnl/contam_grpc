@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <shared_mutex>
+#include <iostream>
 
 #define STDIO_REDIRECT 1
 
@@ -136,12 +137,12 @@ void SimTime::set(void* state)
 
 std::string SimTime::to_string() const
 {
-  return
-    " - step_size: " + std::to_string(step_size) + "\n"
-    " - sim_begin: " + std::to_string(sim_begin) + "\n"
-    " - sim_end: " + std::to_string(sim_end) + "\n"
-    " - duration: " + std::to_string(duration) + "\n"
-    " - num_steps: " + std::to_string(num_steps);
+  return std::string("SimTime\n{") +
+    "\n  step_size: " + std::to_string(step_size) +
+    "\n  sim_begin: " + std::to_string(sim_begin) +
+    "\n  sim_end: " + std::to_string(sim_end) +
+    "\n  duration: " + std::to_string(duration) +
+    "\n  num_steps: " + std::to_string(num_steps) + "\n}";
 }
 
 /// Set the ambience conditions using the SetAmbt API.
@@ -262,7 +263,8 @@ void getZoneMf( void* state, IX date, IX time, IX nz, IX nc)
 }
 
 void runContam(const std::string& sim_id, const std::string& prj_fname,
-               const std::string& out_fname, const std::string& err_fname)
+               const std::string& out_fname, const std::string& err_fname,
+               bool verbose)
 {
 #if defined(STDIO_REDIRECT)
   int saved_stdout = dup(fileno(stdout));
@@ -275,18 +277,25 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
 
   // Get the ContamXState.
   auto [pCxState, new_state] = get_or_create_state(sim_id);
+  std::cerr << (new_state? "New state has been created for sim_id="
+                         : "Existing state is picked up for sim_id=")
+            << sim_id << std::endl;
   AmbienceData amb;
-  auto& amb_data = amb.data();
-  amb_data.insert(amb_data.end(), amb_samples, amb_samples+sizeof(amb_samples)/sizeof(amb_samples[0]));
-  amb.init();
-#if 0
-  printf("{\n");
-  const auto& amb_const_data = const_cast<const AmbienceData&>(amb).data();
-  for (const auto& s: amb_const_data) {
-    printf("%s\n", s.to_string().c_str());
+  {
+    auto& amb_data = amb.data();
+    amb_data.insert(amb_data.end(), amb_samples,
+                    amb_samples+sizeof(amb_samples)/sizeof(amb_samples[0]));
   }
-  printf("}\n");
-#endif
+  amb.init();
+
+  if (verbose) {
+    printf("amb_series:\n[\n");
+    const auto& amb_const_data = const_cast<const AmbienceData&>(amb).data();
+    for (const auto& s: amb_const_data) {
+      printf("  %s,\n", s.to_string().c_str());
+    }
+    printf("]\n");
+  }
 
   simStage = getStage(pCxState);
   printf("\n==========> 1. simStage = %d\n", simStage);
@@ -311,7 +320,9 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   // Get simulation timing information.
   SimTime simTime;
   simTime.set(pCxState);
-  //printf("%s\n", simTime.to_string().c_str());
+  if (verbose) {
+    printf("%s\n", simTime.to_string().c_str());
+  }
 
   // Get the current date/time after initial steady state simulation.
   IX currTime = cxiGetCurrentTime(pCxState);
@@ -339,7 +350,7 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
     [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
     if (updated) {
       setWthCtm(pCxState, amb_curr);
-      //printf("%s\n", amb_now.to_string().c_str());
+      //printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
     }
     // Run next time step.
     cxiDoCoSimStep(pCxState, 1);
