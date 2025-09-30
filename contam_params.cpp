@@ -1,15 +1,17 @@
-#include <string>
-#include <iostream>
+#include "contam_params.h"
+
 #include <fstream>
+#include <iostream>
+#include <string>
 #include <tuple>
-#include <google/protobuf/text_format.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <google/protobuf/message.h>
+
 #include "absl/log/log.h"
 #include "absl/log/log_sink.h"
 #include "absl/log/log_sink_registry.h"
-#include "contam_params.h"
 #include "contam_params.pb.h"
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/text_format.h>
 
 namespace Contam_gRPC {
 
@@ -21,8 +23,9 @@ void ContamParams::clear()
 
 std::string ContamParams::to_string() const
 {
-  std::string str = "{\n  prj_file: " + prj_filename + "\n  amb_series:\n    [\n";
-  for (const auto& s: amb_series) {
+  std::string str =
+    "{\n  prj_file: " + prj_filename + "\n  amb_series:\n    [\n";
+  for (auto const& s : amb_series) {
     str += "      " + s.to_string() + ",\n";
   }
   str += "    ]\n}";
@@ -53,32 +56,34 @@ std::string ClientParams::to_string() const
 {
   using std::string;
 
-  std::string str
-    = string("{\n")
-    + "  of_out: " + string(of_out ? "true\n" : "false\n")
-    + "  of_err: " + string(of_err ? "true\n" : "false\n")
-    + "  of_ach: " + string(of_ach ? "true\n" : "false\n")
-    + "  of_cex: " + string(of_cex ? "true\n" : "false\n")
-    + "  of_csm: " + string(of_csm ? "true\n" : "false\n")
-    + "  of_log: " + string(of_log ? "true\n" : "false\n")
-    + "  of_rst: " + string(of_rst ? "true\n" : "false\n")
-    + "  of_sim: " + string(of_sim ? "true\n" : "false\n")
-    + "  of_xlog: " + string(of_xlog? "true\n" : "false\n")
-    + "  of_prefix: " + of_prefix + "\n}";
+  std::string str = string("{\n")
+                    + "  of_out: " + string(of_out ? "true\n" : "false\n")
+                    + "  of_err: " + string(of_err ? "true\n" : "false\n")
+                    + "  of_ach: " + string(of_ach ? "true\n" : "false\n")
+                    + "  of_cex: " + string(of_cex ? "true\n" : "false\n")
+                    + "  of_csm: " + string(of_csm ? "true\n" : "false\n")
+                    + "  of_log: " + string(of_log ? "true\n" : "false\n")
+                    + "  of_rst: " + string(of_rst ? "true\n" : "false\n")
+                    + "  of_sim: " + string(of_sim ? "true\n" : "false\n")
+                    + "  of_xlog: " + string(of_xlog ? "true\n" : "false\n")
+                    + "  of_prefix: " + of_prefix + "\n}";
   return str;
 }
 
 /// Error handler
 class ContamProtoLogSink : public absl::LogSink {
- public:
-  void Send(const absl::LogEntry& entry) override {
-    std::cerr << "Contam proto: " << entry.text_message_with_prefix_and_newline();
+public:
+  void Send(absl::LogEntry const& entry) override
+  {
+    std::cerr << "Contam proto: "
+              << entry.text_message_with_prefix_and_newline();
   }
 };
 
 /// General prototext reader
-template<typename T>
-bool read_prototext(const std::string& file_name, const bool is_binary,
+template <typename T>
+bool read_prototext(std::string const& file_name,
+                    bool const is_binary,
                     T& proto_params)
 {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -94,15 +99,17 @@ bool read_prototext(const std::string& file_name, const bool is_binary,
   }
   if (is_binary) {
     if (!proto_params.ParseFromIstream(&input)) {
-      std::cerr << "Failed to parse simulation params in binary-formatted input file: "
-                << file_name << std::endl;
+      std::cerr
+        << "Failed to parse simulation params in binary-formatted input file: "
+        << file_name << std::endl;
       return false;
     }
   } else {
     google::protobuf::io::IstreamInputStream istrm(&input);
     if (!google::protobuf::TextFormat::Parse(&istrm, &proto_params)) {
-      std::cerr << "Failed to parse simulation params in text-formatted input file: "
-                << file_name << std::endl;
+      std::cerr
+        << "Failed to parse simulation params in text-formatted input file: "
+        << file_name << std::endl;
       return false;
     }
   }
@@ -111,8 +118,9 @@ bool read_prototext(const std::string& file_name, const bool is_binary,
   return true;
 }
 
-static void set_contam_options(const contam::Sim_Params::Contam_Params& cfg,
-                               ContamParams& cp, bool verbose = false)
+static void set_contam_options(contam::Sim_Params::Contam_Params const& cfg,
+                               ContamParams& cp,
+                               bool verbose = false)
 {
   using Contam_Params = contam::Sim_Params::Contam_Params;
 
@@ -120,8 +128,13 @@ static void set_contam_options(const contam::Sim_Params::Contam_Params& cfg,
   size_t n = cfg.amb_series_size();
   cp.amb_series.reserve(n);
 
-  for(const auto& s: cfg.amb_series()) {
-    cp.amb_series.emplace_back(s.time(), s.temperature(), s.pressure(), s.wind_speed(), s.wind_direction(), s.mass_fraction());
+  for (auto const& s : cfg.amb_series()) {
+    cp.amb_series.emplace_back(s.time(),
+                               s.temperature(),
+                               s.pressure(),
+                               s.wind_speed(),
+                               s.wind_direction(),
+                               s.mass_fraction());
   }
 
   if (verbose) {
@@ -129,8 +142,9 @@ static void set_contam_options(const contam::Sim_Params::Contam_Params& cfg,
   }
 }
 
-static void set_client_options(const contam::Sim_Params::Client_Params& cfg,
-                               ClientParams& cp, bool verbose = false)
+static void set_client_options(contam::Sim_Params::Client_Params const& cfg,
+                               ClientParams& cp,
+                               bool verbose = false)
 {
   using Client_Params = contam::Sim_Params::Client_Params;
 
@@ -151,7 +165,7 @@ static void set_client_options(const contam::Sim_Params::Client_Params& cfg,
 }
 
 std::tuple<ContamParams, ClientParams>
-read_proto_params(const std::string& filename, bool verbose)
+read_proto_params(std::string const& filename, bool verbose)
 {
   contam::Sim_Params sim_params;
   read_prototext(filename, false, sim_params);
@@ -171,4 +185,4 @@ read_proto_params(const std::string& filename, bool verbose)
   return {contam_p, client_p};
 }
 
-} // end of namespace
+}  // namespace Contam_gRPC

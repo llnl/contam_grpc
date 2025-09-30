@@ -4,9 +4,12 @@
 
 namespace Contam_gRPC {
 
-void runContam(const std::string& sim_id, const std::string& prj_fname,
-               const std::string& out_fname, const std::string& err_fname);
+void runContam(std::string const& sim_id,
+               std::string const& prj_fname,
+               std::string const& out_fname,
+               std::string const& err_fname,
+               bool verbose);
 
-} // end of namespace
+}  // namespace Contam_gRPC
 
-#endif // CONTAM_GRPC_CONTAM_DRIVER_H
+#endif  // CONTAM_GRPC_CONTAM_DRIVER_H

@@ -14,7 +14,7 @@ struct ContamResponse {
   bool status;
   std::string err_str;
   ContamResponse() : status(false) {}
-  ContamResponse(bool st, const std::string& str) : status(st), err_str(str) {}
+  ContamResponse(bool st, std::string const& str) : status(st), err_str(str) {}
 };
 
 /*! \brief Parse and consume Contam related arguments
@@ -50,5 +50,5 @@ void initContamClientState(int r);
 /*! \brief Run Comtam client */
 ContamResponse contamClient();
 
-} // end of namespace
+}  // namespace Contam_gRPC
 #endif

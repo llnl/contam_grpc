@@ -1,24 +1,26 @@
 /** @file cxLibDriver_testOneZoneWthCtm.c
  *  @example cxLibDriver_testOneZoneWthCtm.c
- *  @brief contam-x-cosim API driver for test case: \b testOneZoneWthCtm-UseApi.prj
- *  \n \n
- *  This test driver implements functions of the contam-x-cosim API related to
- *  infiltration of contaminants through the building envelope. These functions
- *  are akin to the use of the Wind Pressure and Contaminant (WPC) file
- *  capabilities of CONTAM.
+ *  @brief contam-x-cosim API driver for test case: \b
+ * testOneZoneWthCtm-UseApi.prj \n \n This test driver implements functions of
+ * the contam-x-cosim API related to infiltration of contaminants through the
+ * building envelope. These functions are akin to the use of the Wind Pressure
+ * and Contaminant (WPC) file capabilities of CONTAM.
  */
-#include "contam-x-cosim.h"
 #include "contam_driver.h"
-#include "contam_ambience.h"
+
+#include <unistd.h>  // unlink, dup
+
+#include <cstdio>  // freopen
 #include <cstdlib>
 #include <cstring>
-#include <cstdio> // freopen
-#include <unistd.h> // unlink, dup
-#include <tuple>
-#include <unordered_map>
+#include <iostream>
 #include <mutex>
 #include <shared_mutex>
-#include <iostream>
+#include <tuple>
+#include <unordered_map>
+
+#include "contam-x-cosim.h"
+#include "contam_ambience.h"
 
 #define STDIO_REDIRECT 1
 
@@ -34,7 +36,7 @@ std::shared_mutex sim_state_mutex;
 /**
  * return the state and tell whether a new state has been created.
  */
-std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
+std::tuple<void*, bool> get_or_create_state(std::string const& sim_id)
 {
   {
     std::shared_lock read_lock(sim_state_mutex);
@@ -57,7 +59,7 @@ std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
 }
 #else
 // This is simpler and faster but readers don't run concurrently
-std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
+std::tuple<void*, bool> get_or_create_state(std::string const& sim_id)
 {
   std::unique_lock<std::shared_mutex> lock(sim_state_mutext);
   auto [it, inserted] = sim_states.try_emplace(sim_id, nullptr);
@@ -79,23 +81,23 @@ std::tuple<void*, bool> get_or_create_state(const std::string& sim_id)
 /* PROJECT-specific data and functions.                                      */
 /*---------------------------------------------------------------------------*/
 
-AmbienceSample amb_samples[] =
-{
-  {    0, 293.15, 101325,   0.0,   0.0, 0.0}, // 00:00
-  {18000, 293.15, 101325,   0.0,   0.0, 0.0}, // 05:00
-  {18300, 293.15, 101325,   0.0,   0.0, 0.0023254}, // 05:05
-  {21900, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 06:05
-  {22200, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 06:10
-  {50400, 293.15, 101325, 7.397, 270.0, 0.0023254}, // 14:00
-  {50700, 293.15, 101325,   0.0,   0.0, 0.0}, // 14:05
-  {57600, 293.15, 101325,   0.0,   0.0, 0.0}, // 16:00
-  {57900, 293.15, 101325, 7.397,  90.0, 0.0}, // 16:05
-  {82800, 293.15, 101325, 7.397,  90.0, 0.0}, // 23:00
-  {83100, 293.15, 101325,   0.0,   0.0, 0.0}, // 23:05
-  {86400, 293.15, 101325,   0.0,   0.0, 0.0}  // 24:00
+AmbienceSample amb_samples[] = {
+  {0, 293.15, 101325, 0.0, 0.0, 0.0},                // 00:00
+  {18000, 293.15, 101325, 0.0, 0.0, 0.0},            // 05:00
+  {18300, 293.15, 101325, 0.0, 0.0, 0.0023254},      // 05:05
+  {21900, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 06:05
+  {22200, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 06:10
+  {50400, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 14:00
+  {50700, 293.15, 101325, 0.0, 0.0, 0.0},            // 14:05
+  {57600, 293.15, 101325, 0.0, 0.0, 0.0},            // 16:00
+  {57900, 293.15, 101325, 7.397, 90.0, 0.0},         // 16:05
+  {82800, 293.15, 101325, 7.397, 90.0, 0.0},         // 23:00
+  {83100, 293.15, 101325, 0.0, 0.0, 0.0},            // 23:05
+  {86400, 293.15, 101325, 0.0, 0.0, 0.0}             // 24:00
 };
 
-#define CTM_DT2SEC(_CTM_DATE_,_CTM_TIME_) (((_CTM_DATE_)-1) * 86400 + (_CTM_TIME_))
+#define CTM_DT2SEC(_CTM_DATE_, _CTM_TIME_)                                     \
+  (((_CTM_DATE_) -1) * 86400 + (_CTM_TIME_))
 struct SimTime {
   IX step_size;
   IX sim_begin;
@@ -137,30 +139,29 @@ void SimTime::set(void* state)
 
 std::string SimTime::to_string() const
 {
-  return std::string("SimTime\n{") +
-    "\n  step_size: " + std::to_string(step_size) +
-    "\n  sim_begin: " + std::to_string(sim_begin) +
-    "\n  sim_end: " + std::to_string(sim_end) +
-    "\n  duration: " + std::to_string(duration) +
-    "\n  num_steps: " + std::to_string(num_steps) + "\n}";
+  return std::string("SimTime\n{")
+         + "\n  step_size: " + std::to_string(step_size) + "\n  sim_begin: "
+         + std::to_string(sim_begin) + "\n  sim_end: " + std::to_string(sim_end)
+         + "\n  duration: " + std::to_string(duration)
+         + "\n  num_steps: " + std::to_string(num_steps) + "\n}";
 }
 
 /// Set the ambience conditions using the SetAmbt API.
-void setWthCtm( void *state, const AmbienceSample& amb )
+void setWthCtm(void* state, AmbienceSample const& amb)
 {
-  if( cxiSetAmbtTemperature( state, (R4) amb.temperature ) )
+  if (cxiSetAmbtTemperature(state, (R4) amb.temperature))
     exit(2);
-  if( cxiSetAmbtPressure( state, (R4) amb.pressure ) )
+  if (cxiSetAmbtPressure(state, (R4) amb.pressure))
     exit(3);
-  if( cxiSetAmbtWndSpd( state, (R4) amb.wind_speed ) )
+  if (cxiSetAmbtWndSpd(state, (R4) amb.wind_speed))
     exit(4);
-  if( cxiSetAmbtWndDir( state, (R4) amb.wind_direction ) )
+  if (cxiSetAmbtWndDir(state, (R4) amb.wind_direction))
     exit(5);
-  if( cxiSetAmbtMassFraction( state, 0, amb.mass_fraction ) )
+  if (cxiSetAmbtMassFraction(state, 0, amb.mass_fraction))
     exit(6);
 }
 
-  // Check if it's time to change to the next set of Ambient data.
+// Check if it's time to change to the next set of Ambient data.
 
 /*---------------------------------------------------------------------------*/
 /* Get simulation stage and print corresponding string.                      */
@@ -168,7 +169,11 @@ void setWthCtm( void *state, const AmbienceSample& amb )
 enum eSimStage getStage(void* state)
 {
   enum eSimStage stage = cxiGetSimStage(state);
-  const char* stageNames[] = { "simStage_Invalid","simStage_Initial","simStage_Setup","simStage_Calculation","simStage_End" };
+  char const* stageNames[] = {"simStage_Invalid",
+                              "simStage_Initial",
+                              "simStage_Setup",
+                              "simStage_Calculation",
+                              "simStage_End"};
   printf("Current stage is %s.", stageNames[stage]);
 
   return stage;
@@ -177,15 +182,22 @@ enum eSimStage getStage(void* state)
 /*---------------------------------------------------------------------------*/
 /* Callback error function.                                                  */
 /*---------------------------------------------------------------------------*/
-static void errorHandler(void* state, const char* const headerStr, char* const messageStr, int *pNumErrors)
+static void errorHandler(void* state,
+                         char const* const headerStr,
+                         char* const messageStr,
+                         int* pNumErrors)
 {
   IX stateValid = cxiIsStateValid(state);
-  const char* headers[] = { "NOTE", "WARNING", "ERROR", "FATAL" };
-  printf("stateValid = %d, nErrors = %d, %s:%s", stateValid, *pNumErrors, headerStr, messageStr);
+  char const* headers[] = {"NOTE", "WARNING", "ERROR", "FATAL"};
+  printf("stateValid = %d, nErrors = %d, %s:%s",
+         stateValid,
+         *pNumErrors,
+         headerStr,
+         messageStr);
 
-  if (strcmp(headerStr, "FATAL") == 0)
-  {
-    printf("===== A FATAL error occurred => calling cxiEndSimulation() =====\n");
+  if (strcmp(headerStr, "FATAL") == 0) {
+    printf(
+      "===== A FATAL error occurred => calling cxiEndSimulation() =====\n");
     cxiEndSimulation(state);
   }
 }
@@ -195,16 +207,15 @@ static void errorHandler(void* state, const char* const headerStr, char* const m
 /*---------------------------------------------------------------------------*/
 void projectDataReady(void* state, void* pUserData)
 {
-  IX numPaths = cxiGetNumPaths( state );
+  IX numPaths = cxiGetNumPaths(state);
   PATH_COSIM_DSC pathDesc;
 
   enum eSimStage myStage = getStage(state);
   printf("\n==========> 2. simStage = %d\n", myStage);
 
   IX envCount = 0;
-  for (IX i = 1; i <= numPaths; ++i)
-  {
-    if( cxiGetPathInfo( state, i, &pathDesc ) )
+  for (IX i = 1; i <= numPaths; ++i) {
+    if (cxiGetPathInfo(state, i, &pathDesc))
       exit(1);
     // envIndex > 1 designates an envelope path.
     if (pathDesc.envIndex > 0)
@@ -212,58 +223,64 @@ void projectDataReady(void* state, void* pUserData)
   }
 
   // Get Contaminant information.
-  IX nctm = cxiGetNumCtms( state );
+  IX nctm = cxiGetNumCtms(state);
   I1 name[NAMEFIELDLEN];
-  for (IX i = 0; i < nctm; ++i)
-  {
-    if( cxiGetCtmName( state, i, name ) )
-    {
+  for (IX i = 0; i < nctm; ++i) {
+    if (cxiGetCtmName(state, i, name)) {
       printf("Error getting name for contaminant # %d\n", i);
       exit(1);
     }
     printf("Contaminant %d, Name %s\n", i, name);
   }
 
-  // Get Zone information - test purposes only, i.e., not used to drive simulation.
-  IX numZones = cxiGetNumZones( state );
+  // Get Zone information - test purposes only, i.e., not used to drive
+  // simulation.
+  IX numZones = cxiGetNumZones(state);
   printf("zoneNr\tzoneName\tlevelNum\tlevelName\tzoneVol[m3]\n");
-  for(IX i = 1; i <= numZones; i++)
-  {
+  for (IX i = 1; i <= numZones; i++) {
     IX zoneNumber = -999;
     IX retVal = 0;
     ZONE_COSIM_DSC zDesc;
-    retVal = cxiGetZoneInfo( state, i, &zDesc );
-    if( retVal > 0)
-    {
+    retVal = cxiGetZoneInfo(state, i, &zDesc);
+    if (retVal > 0) {
       printf("Error, cxiGetZoneInfo() returned %d\n", retVal);
       exit(1);
     }
-    printf("%d\t%s\t%d\t%s\t%f\n", zDesc.nr, zDesc.name, zDesc.level_nr, zDesc.level_name, zDesc.Vol);
-    IX zoneNr = cxiGetZoneNumber( state, zDesc.name, zDesc.level_nr, &zoneNumber );
-    printf("\tReverse check using cxiGetZoneNumber(%s, %d) => %d\n", zDesc.name, zDesc.level_nr, zoneNumber);
+    printf("%d\t%s\t%d\t%s\t%f\n",
+           zDesc.nr,
+           zDesc.name,
+           zDesc.level_nr,
+           zDesc.level_name,
+           zDesc.Vol);
+    IX zoneNr =
+      cxiGetZoneNumber(state, zDesc.name, zDesc.level_nr, &zoneNumber);
+    printf("\tReverse check using cxiGetZoneNumber(%s, %d) => %d\n",
+           zDesc.name,
+           zDesc.level_nr,
+           zoneNumber);
   }
 }
 
-void getZoneMf( void* state, IX date, IX time, IX nz, IX nc)
+void getZoneMf(void* state, IX date, IX time, IX nz, IX nc)
 {
-  for(IX z = 1; z <= nz; ++z)
-  {
-    for(IX c = 0; c < nc; ++c)
-    {
+  for (IX z = 1; z <= nz; ++z) {
+    for (IX c = 0; c < nc; ++c) {
       R8 mf;
       char ctm_name[NAMEFIELDLEN];
-      if( cxiGetZoneMF( state, z, c, &mf ) )
+      if (cxiGetZoneMF(state, z, c, &mf))
         exit(1);
-      if( cxiGetCtmName( state, c, ctm_name ) )
+      if (cxiGetCtmName(state, c, ctm_name))
         exit(1);
-      printf("Day %d Time %d Zone %d %s %g kg/kg\n",
-        date, time, z, ctm_name, mf);
+      printf(
+        "Day %d Time %d Zone %d %s %g kg/kg\n", date, time, z, ctm_name, mf);
     }
   }
 }
 
-void runContam(const std::string& sim_id, const std::string& prj_fname,
-               const std::string& out_fname, const std::string& err_fname,
+void runContam(std::string const& sim_id,
+               std::string const& prj_fname,
+               std::string const& out_fname,
+               std::string const& err_fname,
                bool verbose)
 {
 #if defined(STDIO_REDIRECT)
@@ -277,21 +294,22 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
 
   // Get the ContamXState.
   auto [pCxState, new_state] = get_or_create_state(sim_id);
-  std::cerr << (new_state? "New state has been created for sim_id="
-                         : "Existing state is picked up for sim_id=")
+  std::cerr << (new_state ? "New state has been created for sim_id="
+                          : "Existing state is picked up for sim_id=")
             << sim_id << std::endl;
   AmbienceData amb;
   {
     auto& amb_data = amb.data();
-    amb_data.insert(amb_data.end(), amb_samples,
-                    amb_samples+sizeof(amb_samples)/sizeof(amb_samples[0]));
+    amb_data.insert(amb_data.end(),
+                    amb_samples,
+                    amb_samples + sizeof(amb_samples) / sizeof(amb_samples[0]));
   }
   amb.init();
 
   if (verbose) {
     printf("amb_series:\n[\n");
-    const auto& amb_const_data = const_cast<const AmbienceData&>(amb).data();
-    for (const auto& s: amb_const_data) {
+    auto const& amb_const_data = const_cast<AmbienceData const&>(amb).data();
+    for (auto const& s : amb_const_data) {
       printf("  %s,\n", s.to_string().c_str());
     }
     printf("]\n");
@@ -301,17 +319,17 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   printf("\n==========> 1. simStage = %d\n", simStage);
 
   // Set function pointer for the prjDataReady() function to be called.
-  cxiRegisterCallback_PrjDataReady( pCxState, NULL, projectDataReady );
+  cxiRegisterCallback_PrjDataReady(pCxState, NULL, projectDataReady);
   cxiRegisterCallback_Error(pCxState, errorHandler);
 
   //-----  Set wind pressure mode to WTH/CTM method.
   // Must be called before cxiSetupSimulation().
-  cxiSetWindPressureMode( pCxState, 0 );
+  cxiSetWindPressureMode(pCxState, 0);
 
   // Call cxiSetupSimulation() to read the project, set up nodes, links, etc.,
   //  and tell it to use the co-simulation mode which will then cause
   //  projectDataReady(), function defined above, to be called.
-  cxiSetupSimulation( pCxState, const_cast<char*>(prj_fname.c_str()), 1 );
+  cxiSetupSimulation(pCxState, const_cast<char*>(prj_fname.c_str()), 1);
 
   simStage = getStage(pCxState);
 
@@ -332,7 +350,10 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   IX t_curr = CTM_DT2SEC(currDate, currTime);
   [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
   if (!found_init) {
-    fprintf(stderr, "Initial ambience condition is missing for date %d time %d.\n", currDate, currTime);
+    fprintf(stderr,
+            "Initial ambience condition is missing for date %d time %d.\n",
+            currDate,
+            currTime);
   } else {
     setWthCtm(pCxState, amb_init);
   }
@@ -342,7 +363,7 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
   const IX numContams = cxiGetNumCtms(pCxState);
 
   // Get initial zone mass fractions.
-  getZoneMf(pCxState, currDate, currTime, numZones, numContams );
+  getZoneMf(pCxState, currDate, currTime, numZones, numContams);
 
   // Run through the simulation one time step at a time.
   while (t_curr < simTime.sim_end) {
@@ -350,7 +371,7 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
     [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
     if (updated) {
       setWthCtm(pCxState, amb_curr);
-      //printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
+      // printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
     }
     // Run next time step.
     cxiDoCoSimStep(pCxState, 1);
@@ -370,7 +391,9 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
 
   IX stateValidity = cxiIsStateValid(pCxState);
   simStage = getStage(pCxState);
-  printf("\n==========> 5. simStage = %d, stateValid = %d\n", simStage, stateValidity);
+  printf("\n==========> 5. simStage = %d, stateValid = %d\n",
+         simStage,
+         stateValidity);
 
   std::fflush(stdout);
   std::fflush(stderr);
@@ -384,4 +407,4 @@ void runContam(const std::string& sim_id, const std::string& prj_fname,
 #endif
 }
 
-} // end of namespace
+}  // namespace Contam_gRPC

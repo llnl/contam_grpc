@@ -1,38 +1,39 @@
 #ifndef CONTAM_GRPC_UTILS_H
 #define CONTAM_GRPC_UTILS_H
+#include <chrono>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
-#include <chrono>
 
 namespace Contam_gRPC {
 
 std::string getUniqStr(int rank);
 
-bool checkFilename(const std::string& filename);
+bool checkFilename(std::string const& filename);
 
 /*! \brief Add a string to a filename before extension */
-std::string addStrToFilenameBeforeExt(const std::string& filename, const std::string& str);
+std::string addStrToFilenameBeforeExt(std::string const& filename,
+                                      std::string const& str);
 
-std::vector<char> loadFile(const std::string& fname);
+std::vector<char> loadFile(std::string const& fname);
 
 /*! Write a binary file */
-size_t writeFile(
-  const std::string& fname,
-  const std::string& content,
-  std::ios_base::openmode mode = std::ios_base::out);
+size_t writeFile(std::string const& fname,
+                 std::string const& content,
+                 std::ios_base::openmode mode = std::ios_base::out);
 
 /*! Print the content of a data */
-void print(const std::vector<char>& data);
+void print(std::vector<char> const& data);
 
-int mkdir_as_needed(const char* path);
+int mkdir_as_needed(char const* path);
 
-inline double get_time() {
+inline double get_time()
+{
   using namespace std::chrono;
-  return duration_cast<duration<double>>(
-           steady_clock::now().time_since_epoch()).count();
+  return duration_cast<duration<double>>(steady_clock::now().time_since_epoch())
+    .count();
 }
 
-} // end of namespace
+}  // namespace Contam_gRPC
 
-#endif // CONTAM_GRPC_UTILS_H
+#endif  // CONTAM_GRPC_UTILS_H

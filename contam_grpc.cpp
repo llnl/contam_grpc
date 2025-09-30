@@ -1,11 +1,12 @@
 #include "utils.h"
+
 #include "contam_client.h"
 #if defined(USE_MPI)
 #include <mpi.h>
 #endif
 
-int main (int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
   Contam_gRPC::pickContamArgs(argc, argv);
 
   int my_rank = 0;
