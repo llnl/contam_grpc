@@ -6,7 +6,7 @@ message Sim_Params {
   message Contam_Params {
     message AmbienceSample {
       int32 time = 1; ///< in second
-      double temparature = 2; ///< in K
+      double temperature = 2; ///< in K
       double pressure = 3; ///< in Pa
       double wind_speed = 4; ///< in m/s
       double wind_direction = 5; ///< in degree
@@ -28,7 +28,6 @@ message Sim_Params {
     bool of_sim = 8; ///< Whether to retrieve .sim output file from Contam server
     bool of_xlog = 9; ///< Whether to retrieve .xlog output file from Contam server
     string of_prefix = 10; ///< prefix path to the contam output files
-    string server_addr = 11; ///< hostname:port of the server
   }
 
   Contam_Params contam_params = 1;

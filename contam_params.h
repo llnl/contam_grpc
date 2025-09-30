@@ -16,6 +16,7 @@ struct ContamParams {
   std::string prj_filename; ///< Contam project filename
   std::vector<AmbienceSample> amb_series; ///< Ambience timeseries
 
+  void clear();
   std::string to_string() const;
 };
 
@@ -30,8 +31,9 @@ struct ClientParams {
   bool of_sim; ///< Whether to retrieve .sim output file from Contam server
   bool of_xlog; ///< Whether to retrieve .xlog output file from Contam server
   std::string of_prefix; ///< prefix path to the contam output files
-  std::string server_addr; ///< hostname:port of the server
 
+  ClientParams();
+  void clear();
   std::string to_string() const;
 };
 

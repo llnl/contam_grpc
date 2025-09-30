@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <tuple>
 #include <cstdlib> // abort
+#include <iostream>
 #include "contam_ambience.h"
 
 namespace Contam_gRPC {
@@ -15,21 +16,21 @@ AmbienceSample::AmbienceSample()
   : time(0), temperature(0.0), pressure(0.0), wind_speed(0.0),
     wind_direction(0.0), mass_fraction(0.0) {}
 
-AmbienceSample::AmbienceSample(CTM_IX time, CTM_R8 temp, CTM_R8 pres, CTM_R8 wind_spd, CTM_R8 wind_dir, CTM_R8 mf)
-  : time(time),
-    temperature(temperature),
-    pressure(pressure),
-    wind_speed(wind_speed),
-    wind_direction(wind_direction),
-    mass_fraction(mass_fraction)
+AmbienceSample::AmbienceSample(CTM_IX t, CTM_R8 temp, CTM_R8 pres, CTM_R8 wspd, CTM_R8 wdir, CTM_R8 mf)
+  : time(t),
+    temperature(temp),
+    pressure(pres),
+    wind_speed(wspd),
+    wind_direction(wdir),
+    mass_fraction(mf)
 {}
 
 std::string AmbienceSample::to_string() const
 {
   using std::to_string;
   return
-    "{time: " + to_string(time) +
-    ", temparature: " + to_string(temperature) +
+    std::string("{time: ") + to_string(time) +
+    ", temperature: " + to_string(temperature) +
     ", pressure: " + to_string(pressure) +
     ", wind_speed: " + to_string(wind_speed) +
     ", wind_direction: " + to_string(wind_direction) +
@@ -55,11 +56,23 @@ const std::vector<AmbienceSample>& AmbienceData::data() const
   return m_data;
 }
 
-void AmbienceData::init()
+bool AmbienceData::init()
 {
   m_initialized = true;
+  if (m_data.empty()) { // TODO: should this return true?
+    std::cerr << "No ambience data\n";
+    return false;
+  }
   std::sort(m_data.begin(), m_data.end());
   m_curr = m_data.begin();
+  auto t = m_data.begin()->time - 1;
+  for (const auto& s: m_data) {
+    if (t == s.time) {
+      std::cerr << "Detected duplicate time points in ambience time series!\n";
+      return false;
+    }
+  }
+  return true;
 }
 
 void AmbienceData::insert(const AmbienceSample& s)

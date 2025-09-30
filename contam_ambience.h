@@ -33,7 +33,7 @@ struct AmbienceSample {
   CTM_R8 mass_fraction; ///< in kgc/kga
 
   AmbienceSample();
-  AmbienceSample(CTM_IX time, CTM_R8 temp, CTM_R8 pres, CTM_R8 wind_spd, CTM_R8 wind_dir, CTM_R8 mf);
+  AmbienceSample(CTM_IX t, CTM_R8 temp, CTM_R8 pres, CTM_R8 wspd, CTM_R8 wdir, CTM_R8 mf);
   AmbienceSample(const AmbienceSample& other) = default;
   AmbienceSample(AmbienceSample&& other) = default;
   AmbienceSample& operator=(const AmbienceSample& other) = default;
@@ -69,7 +69,7 @@ class AmbienceData {
     /// Allow direct read-only access to data
     const std::vector<AmbienceSample>& data() const;
 
-    void init();
+    bool init();
     bool is_initialized() const { return m_initialized; }
     /// Add an ambience sample before initialized
     void insert(const AmbienceSample& s);

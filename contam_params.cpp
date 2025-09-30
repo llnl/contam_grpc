@@ -13,32 +13,58 @@
 
 namespace Contam_gRPC {
 
+void ContamParams::clear()
+{
+  prj_filename.clear();
+  amb_series.clear();
+}
+
 std::string ContamParams::to_string() const
 {
-  std::string str = "prj_file: " + prj_filename + "\n{";
+  std::string str = "{\n  prj_file: " + prj_filename + "\n  amb_series:\n    [\n";
   for (const auto& s: amb_series) {
-    str += "    " + s.to_string() + ",\n";
+    str += "      " + s.to_string() + ",\n";
   }
-  str += "}";
+  str += "    ]\n}";
 
   return str;
 }
 
+ClientParams::ClientParams()
+{
+  clear();
+}
+
+void ClientParams::clear()
+{
+  of_out = false;
+  of_err = false;
+  of_ach = false;
+  of_cex = false;
+  of_csm = false;
+  of_log = false;
+  of_rst = false;
+  of_sim = false;
+  of_xlog = false;
+  of_prefix.clear();
+}
+
 std::string ClientParams::to_string() const
 {
-  std::string str;
-  str = '{'
-      + "  of_out: " + std::string(of_out ? "true\n" : "false\n")
-      + "  of_err: " + std::string(of_err ? "true\n" : "false\n")
-      + "  of_ach: " + std::string(of_ach ? "true\n" : "false\n")
-      + "  of_cex: " + std::string(of_cex ? "true\n" : "false\n")
-      + "  of_csm: " + std::string(of_csm ? "true\n" : "false\n")
-      + "  of_log: " + std::string(of_log ? "true\n" : "false\n")
-      + "  of_rst: " + std::string(of_rst ? "true\n" : "false\n")
-      + "  of_sim: " + std::string(of_sim ? "true\n" : "false\n")
-      + "  of_xlog: " + std::string(of_xlog? "true\n" : "false\n")
-      + "  of_prefix: " + of_prefix + "\n"
-      + "  server_addr: " + server_addr + "\n}";
+  using std::string;
+
+  std::string str
+    = string("{\n")
+    + "  of_out: " + string(of_out ? "true\n" : "false\n")
+    + "  of_err: " + string(of_err ? "true\n" : "false\n")
+    + "  of_ach: " + string(of_ach ? "true\n" : "false\n")
+    + "  of_cex: " + string(of_cex ? "true\n" : "false\n")
+    + "  of_csm: " + string(of_csm ? "true\n" : "false\n")
+    + "  of_log: " + string(of_log ? "true\n" : "false\n")
+    + "  of_rst: " + string(of_rst ? "true\n" : "false\n")
+    + "  of_sim: " + string(of_sim ? "true\n" : "false\n")
+    + "  of_xlog: " + string(of_xlog? "true\n" : "false\n")
+    + "  of_prefix: " + of_prefix + "\n}";
   return str;
 }
 
@@ -118,7 +144,6 @@ static void set_client_options(const contam::Sim_Params::Client_Params& cfg,
   cp.of_sim = cfg.of_sim();
   cp.of_xlog = cfg.of_xlog();
   cp.of_prefix = cfg.of_prefix();
-  cp.server_addr = cfg.server_addr();
 
   if (verbose) {
     std::cout << cp.to_string() << std::endl;
