@@ -1,5 +1,9 @@
+# The schema of this prototext file is defined in 'contam_params.proto'
+# The command-line option takes higher precedence when a same variable
+# is specified by both ia prototext file and a cmd-line option.
+
 contam_params {
-  prj_filename: ""
+  #prj_filename: ""
   amb_series: [
     {time:     0, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: 0.0},
     {time: 18000, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: 0.0},
@@ -16,6 +20,7 @@ contam_params {
   ]
 }
 
+# The default value of unspecified boolean variable is false
 client_params {
   of_out: true
   of_err: true
