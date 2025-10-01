@@ -286,7 +286,7 @@ public:
   /*! \brief Sends the client's request and presents the response received from
    * the server.
    */
-  ContamResponse RunContam(std::vector<char> const& prj);
+  ContamResponse RunContam();
 
 private:
   std::unique_ptr<ContamServer::Stub> stub_;
@@ -307,11 +307,17 @@ void set_ambience(ContamRequest& request,
   }
 }
 
-ContamResponse ContamServerClient::RunContam(std::vector<char> const& prj)
+ContamResponse ContamServerClient::RunContam()
 {
   std::cout << "================ Contam setup ================\n";
   std::cout << ctmState.to_string() << std::endl;
   std::cout << "==============================================\n";
+
+  auto const prj = loadFile(ctmState.contam_params.prj_filename);
+  std::cout << "Loaded Contam project file '"
+                 + ctmState.contam_params.prj_filename + "' of "
+                 + std::to_string(prj.size()) + " bytes\n";
+
   // Message to send to the server.
   ContamRequest request;
   request.set_sim_id(ctmState.sim_id);
@@ -323,7 +329,6 @@ ContamResponse ContamServerClient::RunContam(std::vector<char> const& prj)
   request.set_rst(ctmState.client_params.of_rst);
   request.set_sim(ctmState.client_params.of_sim);
   request.set_xlog(ctmState.client_params.of_xlog);
-
   set_ambience(request, ctmState.contam_params.amb_series);
 
   // Reponse received from the server
@@ -405,12 +410,7 @@ ContamResponse contamClient()
   ContamServerClient contam_connector(
     grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
 
-  auto const prj_file = loadFile(ctmState.contam_params.prj_filename);
-  std::cout << "Loaded Contam project file '"
-                 + ctmState.contam_params.prj_filename + "' of "
-                 + std::to_string(prj_file.size()) + " bytes\n";
-
-  auto const reply = contam_connector.RunContam(prj_file);
+  auto const reply = contam_connector.RunContam();
 
   std::cout << "Contam RPC reply status: "
             << (reply.status ? "success" : "fail") << std::endl;
