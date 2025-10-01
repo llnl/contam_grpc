@@ -8,6 +8,7 @@ RUN fakeroot dnf install -y wget hostname libevent
 RUN fakeroot dnf install -y awk gawk
 RUN fakeroot dnf install -y vim patch make cmake gzip git gcc-c++ python3 python3-pip python3-devel
 RUN fakeroot dnf install -y glibc-locale-source
+RUN fakeroot dnf install -y gdb clang-format
 RUN fakeroot python3 -m pip install --upgrade pip
 RUN fakeroot pip3 install --no-cache-dir cffi numpy pycparser
 RUN fakeroot pip3 install contamxpy
