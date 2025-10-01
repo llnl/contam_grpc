@@ -15,7 +15,7 @@
 #include "absl/flags/parse.h"
 #include "absl/log/initialize.h"
 #include "absl/strings/str_format.h"
-
+#include "contam_ambience.pb.h"
 #include "contam_rpc.grpc.pb.h"
 
 using contam::rpc::ContamReply;
@@ -34,6 +34,39 @@ ABSL_FLAG(std::string,
           "Prefix of the names of Contam output files");
 
 namespace Contam_gRPC {
+
+using Ambience_Sample = contam::ambience::Ambience_Sample;
+
+bool set_ambience(
+  AmbienceData& amb,
+  google::protobuf::RepeatedPtrField<Ambience_Sample> const& amb_series,
+  int amb_series_size,
+  bool const verbose)
+{
+  {
+    auto& amb_data = amb.data();
+    amb_data.reserve(static_cast<size_t>(amb_series_size));
+    for (auto const& as : amb_series) {
+      amb_data.emplace_back(as.time(),
+                            as.temperature(),
+                            as.pressure(),
+                            as.wind_speed(),
+                            as.wind_direction(),
+                            as.mass_fraction());
+    }
+  }
+  bool ok = amb.init();
+
+  if (verbose) {
+    printf("amb_series:\n[\n");
+    auto const& amb_const_data = const_cast<AmbienceData const&>(amb).data();
+    for (auto const& s : amb_const_data) {
+      printf("  %s,\n", s.to_string().c_str());
+    }
+    printf("]\n");
+  }
+  return ok;
+}
 
 // Logic and data behind the server's behavior.
 class ContamServerServiceImpl final : public ContamServer::Service {
@@ -58,8 +91,19 @@ class ContamServerServiceImpl final : public ContamServer::Service {
     std::cout << "Contam project received: " << prj_fname << std::endl;
 
     bool const verbose = absl::GetFlag(FLAGS_ctm_verbose);
-    runContam(
-      request->sim_id(), prj_fname, stdout_fname, stderr_fname, verbose);
+
+    AmbienceData amb;
+    if (!set_ambience(
+          amb, request->amb_series(), request->amb_series_size(), verbose)) {
+      std::cerr << "Failed to set ambience!" << std::endl;
+    }
+
+    runContam(request->sim_id(),
+              prj_fname,
+              stdout_fname,
+              stderr_fname,
+              std::move(amb),
+              verbose);
     unlink(prj_fname.c_str());
 
     {

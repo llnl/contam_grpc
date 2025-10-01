@@ -71,16 +71,7 @@ std::tuple<void*, bool> get_or_create_state(std::string const& sim_id)
 }
 #endif
 
-/*---------------------------------------------------------------------------*/
-/* contam-x API driver for test case: testOneZoneWpcUseApi.prj               */
-/*---------------------------------------------------------------------------*/
-
-//---------- Global variables.
-
-/*---------------------------------------------------------------------------*/
-/* PROJECT-specific data and functions.                                      */
-/*---------------------------------------------------------------------------*/
-
+/*
 AmbienceSample amb_samples[] = {
   {0, 293.15, 101325, 0.0, 0.0, 0.0},                // 00:00
   {18000, 293.15, 101325, 0.0, 0.0, 0.0},            // 05:00
@@ -95,6 +86,7 @@ AmbienceSample amb_samples[] = {
   {83100, 293.15, 101325, 0.0, 0.0, 0.0},            // 23:05
   {86400, 293.15, 101325, 0.0, 0.0, 0.0}             // 24:00
 };
+*/
 
 #define CTM_DT2SEC(_CTM_DATE_, _CTM_TIME_)                                     \
   (((_CTM_DATE_) -1) * 86400 + (_CTM_TIME_))
@@ -281,6 +273,7 @@ void runContam(std::string const& sim_id,
                std::string const& prj_fname,
                std::string const& out_fname,
                std::string const& err_fname,
+               AmbienceData&& amb,
                bool verbose)
 {
 #if defined(STDIO_REDIRECT)
@@ -297,23 +290,6 @@ void runContam(std::string const& sim_id,
   std::cerr << (new_state ? "New state has been created for sim_id="
                           : "Existing state is picked up for sim_id=")
             << sim_id << std::endl;
-  AmbienceData amb;
-  {
-    auto& amb_data = amb.data();
-    amb_data.insert(amb_data.end(),
-                    amb_samples,
-                    amb_samples + sizeof(amb_samples) / sizeof(amb_samples[0]));
-  }
-  amb.init();
-
-  if (verbose) {
-    printf("amb_series:\n[\n");
-    auto const& amb_const_data = const_cast<AmbienceData const&>(amb).data();
-    for (auto const& s : amb_const_data) {
-      printf("  %s,\n", s.to_string().c_str());
-    }
-    printf("]\n");
-  }
 
   simStage = getStage(pCxState);
   printf("\n==========> 1. simStage = %d\n", simStage);

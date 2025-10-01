@@ -20,11 +20,9 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-
-#include "contam_rpc.grpc.pb.h"
-
 #include "contam_client.h"
 #include "contam_params.h"
+#include "contam_rpc.grpc.pb.h"
 #include <absl/types/optional.h>
 
 ABSL_FLAG(std::string, ctm_target, "localhost:50051", "Server address");
@@ -294,6 +292,21 @@ private:
   std::unique_ptr<ContamServer::Stub> stub_;
 };
 
+void set_ambience(ContamRequest& request,
+                  std::vector<AmbienceSample> const& amb_series)
+{
+  request.mutable_amb_series()->Reserve(amb_series.size());
+  for (auto const& as : amb_series) {
+    auto sample_ptr = request.add_amb_series();
+    sample_ptr->set_time(as.time);
+    sample_ptr->set_temperature(as.temperature);
+    sample_ptr->set_pressure(as.pressure);
+    sample_ptr->set_wind_speed(as.wind_speed);
+    sample_ptr->set_wind_direction(as.wind_direction);
+    sample_ptr->set_mass_fraction(as.mass_fraction);
+  }
+}
+
 ContamResponse ContamServerClient::RunContam(std::vector<char> const& prj)
 {
   std::cout << "================ Contam setup ================\n";
@@ -310,6 +323,8 @@ ContamResponse ContamServerClient::RunContam(std::vector<char> const& prj)
   request.set_rst(ctmState.client_params.of_rst);
   request.set_sim(ctmState.client_params.of_sim);
   request.set_xlog(ctmState.client_params.of_xlog);
+
+  set_ambience(request, ctmState.contam_params.amb_series);
 
   // Reponse received from the server
   ContamReply reply;

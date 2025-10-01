@@ -2,12 +2,15 @@
 #define CONTAM_GRPC_CONTAM_DRIVER_H
 #include <string>
 
+#include "contam_ambience.h"
+
 namespace Contam_gRPC {
 
 void runContam(std::string const& sim_id,
                std::string const& prj_fname,
                std::string const& out_fname,
                std::string const& err_fname,
+               AmbienceData&& amb,
                bool verbose);
 
 }  // namespace Contam_gRPC
