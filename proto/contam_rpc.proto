@@ -1,13 +1,8 @@
 syntax = "proto3";
 
-/*
-option java_multiple_files = true;
-option java_package = "io.grpc.examples.contam";
-option java_outer_classname = "ContamWorldProto";
-option objc_class_prefix = "HLW";
-*/
+package contam.rpc;
 
-package contam;
+import "contam_ambience.proto";
 
 // The Contam service definition.
 service ContamServer {
@@ -30,6 +25,7 @@ message ContamRequest {
   bool rst = 8;
   bool sim = 9;
   bool xlog = 10;
+  repeated contam.ambience.Ambience_Sample amb_series = 11; ///< Ambience timeseries
 }
 
 // The response message from contam simulation service

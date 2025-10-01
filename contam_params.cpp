@@ -118,12 +118,14 @@ bool read_prototext(std::string const& file_name,
   return true;
 }
 
-static void set_contam_options(contam::Sim_Params::Contam_Params const& cfg,
+using Sim_Params = contam::params::Sim_Params;
+using Contam_Params = contam::params::Sim_Params::Contam_Params;
+using Client_Params = contam::params::Sim_Params::Client_Params;
+
+static void set_contam_options(Contam_Params const& cfg,
                                ContamParams& cp,
                                bool verbose = false)
 {
-  using Contam_Params = contam::Sim_Params::Contam_Params;
-
   cp.prj_filename = cfg.prj_filename();
   size_t n = cfg.amb_series_size();
   cp.amb_series.reserve(n);
@@ -142,12 +144,10 @@ static void set_contam_options(contam::Sim_Params::Contam_Params const& cfg,
   }
 }
 
-static void set_client_options(contam::Sim_Params::Client_Params const& cfg,
+static void set_client_options(Client_Params const& cfg,
                                ClientParams& cp,
                                bool verbose = false)
 {
-  using Client_Params = contam::Sim_Params::Client_Params;
-
   cp.of_out = cfg.of_out();
   cp.of_err = cfg.of_err();
   cp.of_ach = cfg.of_ach();
@@ -167,7 +167,7 @@ static void set_client_options(contam::Sim_Params::Client_Params const& cfg,
 std::tuple<ContamParams, ClientParams>
 read_proto_params(std::string const& filename, bool verbose)
 {
-  contam::Sim_Params sim_params;
+  Sim_Params sim_params;
   read_prototext(filename, false, sim_params);
 
   if (verbose) {

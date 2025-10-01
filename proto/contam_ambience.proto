@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package contam.ambience;
+
+message Ambience_Sample {
+  int32 time = 1; ///< in second
+  double temperature = 2; ///< in K
+  double pressure = 3; ///< in Pa
+  double wind_speed = 4; ///< in m/s
+  double wind_direction = 5; ///< in degree
+  double mass_fraction = 6; ///< in kgc/kga
+}

@@ -80,9 +80,23 @@ if (${_IS_SYSTEM_DIR} STREQUAL "-1")
 endif ()
 
 
-################################################################
-#  Protocol buffer for contam_params  messages
-################################################################
+#################################################################
+#  Protocol buffer for contam_ambience and contam_params messages
+#################################################################
+
+get_filename_component(contam_ambience_proto "proto/contam_ambience.proto" ABSOLUTE)
+get_filename_component(contam_ambience_proto_path "${contam_ambience_proto}" PATH)
+
+# Generated sources
+set(contam_ambience_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam_ambience.pb.cc")
+set(contam_ambience_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam_ambience.pb.h")
+add_custom_command(
+  OUTPUT "${contam_ambience_proto_srcs}" "${contam_ambience_proto_hdrs}"
+  COMMAND ${_PROTOBUF_PROTOC}
+  ARGS --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+       -I "${contam_ambience_proto_path}"
+       "${contam_ambience_proto}"
+  DEPENDS "${contam_ambience_proto}")
 
 get_filename_component(contam_params_proto "proto/contam_params.proto" ABSOLUTE)
 get_filename_component(contam_params_proto_path "${contam_params_proto}" PATH)
@@ -93,10 +107,8 @@ set(contam_params_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam_params.pb.h")
 add_custom_command(
   OUTPUT "${contam_params_proto_srcs}" "${contam_params_proto_hdrs}"
   COMMAND ${_PROTOBUF_PROTOC}
-  ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
-       --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+  ARGS --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
        -I "${contam_params_proto_path}"
-       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
        "${contam_params_proto}"
   DEPENDS "${contam_params_proto}")
 
@@ -105,23 +117,24 @@ add_custom_command(
 #  Protocol buffer for gRPC messages
 ################################################################
 
-get_filename_component(contam_proto "proto/contam.proto" ABSOLUTE)
-get_filename_component(contam_proto_path "${contam_proto}" PATH)
+get_filename_component(contam_rpc_proto "proto/contam_rpc.proto" ABSOLUTE)
+get_filename_component(contam_rpc_proto_path "${contam_rpc_proto}" PATH)
 
 # Generated sources
-set(contam_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam.pb.cc")
-set(contam_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam.pb.h")
-set(contam_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam.grpc.pb.cc")
-set(contam_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam.grpc.pb.h")
+set(contam_rpc_proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam_rpc.pb.cc")
+set(contam_rpc_proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam_rpc.pb.h")
+set(contam_grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/contam_rpc.grpc.pb.cc")
+set(contam_grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/contam_rpc.grpc.pb.h")
 add_custom_command(
-  OUTPUT "${contam_proto_srcs}" "${contam_proto_hdrs}" "${contam_grpc_srcs}" "${contam_grpc_hdrs}"
+  OUTPUT "${contam_rpc_proto_srcs}" "${contam_rpc_proto_hdrs}"
+         "${contam_grpc_srcs}" "${contam_grpc_hdrs}"
   COMMAND ${_PROTOBUF_PROTOC}
   ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
        --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-       -I "${contam_proto_path}"
+       -I "${contam_rpc_proto_path}"
        --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
-       "${contam_proto}"
-  DEPENDS "${contam_proto}")
+       "${contam_rpc_proto}"
+  DEPENDS "${contam_rpc_proto}")
 
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
@@ -134,10 +147,12 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 add_library(contam_grpc_proto STATIC
   ${contam_grpc_srcs}
   ${contam_grpc_hdrs}
-  ${contam_proto_srcs}
-  ${contam_proto_hdrs}
+  ${contam_rpc_proto_srcs}
+  ${contam_rpc_proto_hdrs}
   ${contam_params_proto_srcs}
-  ${contam_params_proto_hdrs})
+  ${contam_params_proto_hdrs}
+  ${contam_ambience_proto_srcs}
+  ${contam_ambience_proto_hdrs})
 
 target_link_libraries(contam_grpc_proto PRIVATE
   absl::check

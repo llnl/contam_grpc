@@ -21,11 +21,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 
-//#ifdef BAZEL_BUILD
-//#include "examples/protos/contam.grpc.pb.h"
-//#else
-#include "contam.grpc.pb.h"
-//#endif
+#include "contam_rpc.grpc.pb.h"
 
 #include "contam_client.h"
 #include "contam_params.h"
@@ -76,9 +72,9 @@ ABSL_FLAG(std::string,
           "",
           "Filename of the prototext for Contam params");
 
-using contam::ContamReply;
-using contam::ContamRequest;
-using contam::ContamServer;
+using contam::rpc::ContamReply;
+using contam::rpc::ContamRequest;
+using contam::rpc::ContamServer;
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;

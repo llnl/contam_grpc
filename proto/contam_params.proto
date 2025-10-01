@@ -1,20 +1,13 @@
 syntax = "proto3";
 
-package contam;
+package contam.params;
+
+import "contam_ambience.proto";
 
 message Sim_Params {
   message Contam_Params {
-    message AmbienceSample {
-      int32 time = 1; ///< in second
-      double temperature = 2; ///< in K
-      double pressure = 3; ///< in Pa
-      double wind_speed = 4; ///< in m/s
-      double wind_direction = 5; ///< in degree
-      double mass_fraction = 6; ///< in kgc/kga
-    }
-
     string prj_filename = 1; ///< Contam project filename
-    repeated AmbienceSample amb_series = 2; ///< Ambience timeseries
+    repeated contam.ambience.Ambience_Sample amb_series = 2; ///< Ambience timeseries
   }
 
   message Client_Params {

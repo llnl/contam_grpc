@@ -16,15 +16,11 @@
 #include "absl/log/initialize.h"
 #include "absl/strings/str_format.h"
 
-#ifdef BAZEL_BUILD
-#include "examples/protos/contam.grpc.pb.h"
-#else
-#include "contam.grpc.pb.h"
-#endif
+#include "contam_rpc.grpc.pb.h"
 
-using contam::ContamReply;
-using contam::ContamRequest;
-using contam::ContamServer;
+using contam::rpc::ContamReply;
+using contam::rpc::ContamRequest;
+using contam::rpc::ContamServer;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;

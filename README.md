@@ -126,11 +126,22 @@ podman run -p 50051:50051 -v $PWD/data:/data --rm -it localhost/contam-grpc
     Once these components become publicly available, we will update the process to download them from
     the public repository.
 - gRPC with ABSL component and protobuf (proto3)
+  If no gRPC_DIR is given, cmake will download and build it before buiding this library.
+  However, gRPC can be prebuilt as follows:
+  ```sh
+   git clone --depth 1 --recursive https://github.com/grpc/grpc.git
+   cd grpc
+   mkdir cmake/build
+   cd cmake/build
+   cmake -DgRPC_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 -DgRPC_BUILD_TESTS=OFF -DABSL_ENABLE_INSTALL=ON -DCMAKE_INSTALL_PREFIX=`realpath ../../..`/grpc-install ../..
+   export gRPC_DIR=`realpath ../../..`/grpc-install
+  ```
 
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.
+Run clang-format before commiting.
 
 Please make sure to update tests as appropriate.
 
