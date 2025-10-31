@@ -24,8 +24,21 @@ using CTM_IX = int32_t;
 using CTM_R8 = double;
 #endif
 
-/*! \brief Contam ambience sample at a specific time */
+/**
+ * \brief Contam ambience sample at a specific time
+ *
+ * The altitude of the building site will be used to determine a
+ * default barometric pressure.
+ * Other default conditions are no wind, 20 °C and a barometric
+ * pressure of 1 atmosphere (approximately 101 kPa).
+ */
+
 struct AmbienceSample {
+  static constexpr CTM_R8 default_temperature = 293.15; // 20 degree celsius in Kelvin
+  static constexpr CTM_R8 default_pressure = 101000; // Barometric pressure in Pa
+  static constexpr CTM_R8 default_wind_speed = 0.0;
+  static constexpr CTM_R8 default_wind_direction = 0.0;
+
   CTM_IX time;            ///< in second
   CTM_R8 temperature;     ///< in K
   CTM_R8 pressure;        ///< barometric pressure in Pa

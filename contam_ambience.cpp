@@ -15,10 +15,10 @@ namespace Contam_gRPC {
 
 AmbienceSample::AmbienceSample()
   : time(0),
-    temperature(0.0),
-    pressure(0.0),
-    wind_speed(0.0),
-    wind_direction(0.0),
+    temperature(default_temperature),
+    pressure(default_pressure),
+    wind_speed(default_wind_speed),
+    wind_direction(default_wind_direction),
     mass_fraction {}
 {}
 
