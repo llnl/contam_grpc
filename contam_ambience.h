@@ -48,6 +48,7 @@ struct AmbienceSample {
   std::vector<CTM_R8> mass_fraction;  ///< in kgc/kga
 
   AmbienceSample();
+  ~AmbienceSample();
   AmbienceSample(CTM_IX t,
                  CTM_R8 temp,
                  CTM_R8 pres,
@@ -101,6 +102,8 @@ public:
   /** Return the last known abience sample earlier than or equal to t.
       Also, indicate where a sample was found and if a new sample was found */
   std::tuple<AmbienceSample, bool, bool> get_sample(const CTM_IX t);
+
+  std::string to_string(unsigned indent = 0u) const;
 };
 
 }  // namespace Contam_gRPC

@@ -7,7 +7,7 @@ import "contam_ambience.proto";
 message Sim_Params {
   message Contam_Params {
     string prj_filename = 1; ///< Contam project filename
-    repeated contam.ambience.Ambience_Sample amb_series = 2; ///< Ambience timeseries
+    repeated contam.ambience.Contam_Ambience ambiences = 2; ///< Set of ambience timeseries
   }
 
   message Client_Params {

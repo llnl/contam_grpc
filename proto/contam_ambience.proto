@@ -10,3 +10,7 @@ message Ambience_Sample {
   double wind_direction = 5; ///< in degree
   repeated double mass_fraction = 6; ///< in kgc/kga
 }
+
+message Contam_Ambience {
+  repeated Ambience_Sample amb_series = 2; ///< Ambience timeseries
+}

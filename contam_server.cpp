@@ -7,6 +7,8 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
+#include <google/protobuf/repeated_ptr_field.h>
+
 #ifdef __linux__
 #include <sys/syscall.h>
 #endif
@@ -35,39 +37,45 @@ ABSL_FLAG(std::string,
 
 namespace Contam_gRPC {
 
-using Ambience_Sample = contam::ambience::Ambience_Sample;
 
-bool set_ambience(
-  AmbienceData& amb,
-  google::protobuf::RepeatedPtrField<Ambience_Sample> const& amb_series,
-  int amb_series_size,
-  bool const verbose)
+bool set_ambience(std::vector<AmbienceData>& ambiences,
+                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
+                  int ambiences_size,
+                  bool const verbose = false)
 {
-  {
-    auto& amb_data = amb.data();
-    amb_data.reserve(static_cast<size_t>(amb_series_size));
-    for (auto const& as : amb_series) {
-      amb_data.emplace_back(as.time(),
-                            as.temperature(),
-                            as.pressure(),
-                            as.wind_speed(),
-                            as.wind_direction(),
-                            std::vector<CTM_R8> {as.mass_fraction().begin(),
-                                                 as.mass_fraction().end()});
+  size_t n = static_cast<size_t>(ambiences_size);
+  ambiences.clear();
+  ambiences.reserve(n);
+
+  for (const auto& proto_amb : proto_ambiences) {
+    auto& amb_data = ambiences.emplace_back();
+    auto& amb_series = amb_data.data();
+    amb_series.reserve(proto_amb.amb_series_size());
+
+    for (auto const& s : proto_amb.amb_series()) {
+      auto const& mf = s.mass_fraction();
+      amb_series.emplace_back(
+        s.time(),
+        s.temperature(),
+        s.pressure(),
+        s.wind_speed(),
+        s.wind_direction(),
+        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+    }
+    if (!amb_data.init()) {
+      return false;
     }
   }
-  bool ok = amb.init();
-
   if (verbose) {
     printf("amb_series:\n[\n");
-    auto const& amb_const_data = const_cast<AmbienceData const&>(amb).data();
-    for (auto const& s : amb_const_data) {
-      printf("  %s,\n", s.to_string().c_str());
+    for (const auto& ad : ambiences) {
+      printf("%s,\n", ad.to_string(2).c_str());
     }
     printf("]\n");
   }
-  return ok;
+  return true;
 }
+
 
 // Logic and data behind the server's behavior.
 class ContamServerServiceImpl final : public ContamServer::Service {
@@ -93,9 +101,9 @@ class ContamServerServiceImpl final : public ContamServer::Service {
 
     bool const verbose = absl::GetFlag(FLAGS_ctm_verbose);
 
-    AmbienceData amb;
+    std::vector<AmbienceData> ambs;
     if (!set_ambience(
-          amb, request->amb_series(), request->amb_series_size(), verbose)) {
+          ambs, request->ambiences(), request->ambiences_size(), verbose)) {
       std::cerr << "Failed to set ambience!" << std::endl;
     }
 
@@ -103,7 +111,7 @@ class ContamServerServiceImpl final : public ContamServer::Service {
               prj_fname,
               stdout_fname,
               stderr_fname,
-              std::move(amb),
+              std::move(ambs),
               verbose);
     unlink(prj_fname.c_str());
 

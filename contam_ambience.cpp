@@ -22,6 +22,11 @@ AmbienceSample::AmbienceSample()
     mass_fraction {}
 {}
 
+AmbienceSample::~AmbienceSample()
+{
+  mass_fraction.clear();
+}
+
 AmbienceSample::AmbienceSample(CTM_IX t,
                                CTM_R8 temp,
                                CTM_R8 pres,
@@ -150,6 +155,18 @@ std::tuple<AmbienceSample, bool, bool> AmbienceData::get_sample(const CTM_IX t)
 
   m_been_found = true;
   return {*(--m_curr), true, true};
+}
+
+std::string AmbienceData::to_string(unsigned indent) const
+{
+  const std::string str_indent = std::string(indent, ' ');
+  const std::string str_indent_inner = std::string(indent + 2, ' ');
+  std::string str = str_indent + "[\n";
+  for (const auto& as : m_data) {
+    str += str_indent_inner + as.to_string() + ",\n";
+  }
+  str += str_indent + ']';
+  return str;
 }
 
 }  // namespace Contam_gRPC

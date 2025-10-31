@@ -4,19 +4,23 @@
 
 contam_params {
   #prj_filename: ""
-  amb_series: [
-    {time:     0, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
-    {time: 18000, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
-    {time: 18300, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0023254]},
-    {time: 21900, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
-    {time: 22200, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
-    {time: 50400, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
-    {time: 50700, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
-    {time: 57600, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
-    {time: 57900, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction:  90.0, mass_fraction: [0.0]},
-    {time: 82800, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction:  90.0, mass_fraction: [0.0]},
-    {time: 83100, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
-    {time: 86400, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]}
+  ambiences: [
+    {
+      amb_series: [
+        {time:     0, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
+        {time: 18000, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
+        {time: 18300, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0023254]},
+        {time: 21900, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
+        {time: 22200, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
+        {time: 50400, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction: 270.0, mass_fraction: [0.0023254]},
+        {time: 50700, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
+        {time: 57600, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
+        {time: 57900, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction:  90.0, mass_fraction: [0.0]},
+        {time: 82800, temperature: 293.15, pressure: 101325, wind_speed: 7.397, wind_direction:  90.0, mass_fraction: [0.0]},
+        {time: 83100, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]},
+        {time: 86400, temperature: 293.15, pressure: 101325, wind_speed:   0.0, wind_direction:   0.0, mass_fraction: [0.0]}
+      ]
+    }
   ]
 }
 

@@ -15,7 +15,7 @@ namespace Contam_gRPC {
 
 struct ContamParams {
   std::string prj_filename;                ///< Contam project filename
-  std::vector<AmbienceSample> amb_series;  ///< Ambience timeseries
+  std::vector<std::vector<AmbienceSample>> ambiences;  ///< Set of ambience timeseries
 
   void clear();
   std::string to_string() const;

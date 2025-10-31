@@ -18,15 +18,18 @@ namespace Contam_gRPC {
 void ContamParams::clear()
 {
   prj_filename.clear();
-  amb_series.clear();
+  ambiences.clear();
 }
 
 std::string ContamParams::to_string() const
 {
   std::string str =
-    "{\n  prj_file: " + prj_filename + "\n  amb_series:\n    [\n";
-  for (auto const& s : amb_series) {
-    str += "      " + s.to_string() + ",\n";
+    "{\n  prj_file: " + prj_filename + "\n  ambiences:\n    [\n";
+  for (auto const& amb_series : ambiences) {
+    str += "      { amb_series: [ ";
+    for (auto const& s : amb_series) {
+      str += s.to_string() + " ] } ,\n";
+    }
   }
   str += "    ]\n}";
 
@@ -122,24 +125,37 @@ using Sim_Params = contam::params::Sim_Params;
 using Contam_Params = contam::params::Sim_Params::Contam_Params;
 using Client_Params = contam::params::Sim_Params::Client_Params;
 
+void set_ambience(std::vector<std::vector<AmbienceSample>>& ambiences,
+                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
+                  int ambiences_size)
+{
+  size_t n = static_cast<size_t>(ambiences_size);
+  ambiences.reserve(n);
+
+  for (const auto& proto_amb : proto_ambiences) {
+    auto& amb_series = ambiences.emplace_back();
+    amb_series.reserve(proto_amb.amb_series_size());
+
+    for (auto const& s : proto_amb.amb_series()) {
+      auto const& mf = s.mass_fraction();
+      amb_series.emplace_back(
+        s.time(),
+        s.temperature(),
+        s.pressure(),
+        s.wind_speed(),
+        s.wind_direction(),
+        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+    }
+  }
+}
+
 static void set_contam_options(Contam_Params const& cfg,
                                ContamParams& cp,
                                bool verbose = false)
 {
   cp.prj_filename = cfg.prj_filename();
-  size_t n = cfg.amb_series_size();
-  cp.amb_series.reserve(n);
 
-  for (auto const& s : cfg.amb_series()) {
-    auto const& mf = s.mass_fraction();
-    cp.amb_series.emplace_back(
-      s.time(),
-      s.temperature(),
-      s.pressure(),
-      s.wind_speed(),
-      s.wind_direction(),
-      std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
-  }
+  set_ambience(cp.ambiences, cfg.ambiences(), cfg.ambiences_size());
 
   if (verbose) {
     std::cout << cp.to_string() << std::endl;

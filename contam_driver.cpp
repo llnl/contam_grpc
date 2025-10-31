@@ -274,7 +274,7 @@ void runContam(std::string const& sim_id,
                std::string const& prj_fname,
                std::string const& out_fname,
                std::string const& err_fname,
-               AmbienceData&& amb,
+               std::vector<AmbienceData>&& ambs,
                bool verbose)
 {
 #if defined(STDIO_REDIRECT)
@@ -325,14 +325,17 @@ void runContam(std::string const& sim_id,
 
   // Set initial Ambient conditions.
   IX t_curr = CTM_DT2SEC(currDate, currTime);
-  [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
-  if (!found_init) {
-    fprintf(stderr,
-            "Initial ambience condition is missing for date %d time %d.\n",
-            currDate,
-            currTime);
-  } else {
-    setWthCtm(pCxState, amb_init);
+  if (ambs.size() == 1u) {
+    auto& amb = ambs[0];
+    [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
+    if (!found_init) {
+      fprintf(stderr,
+              "Initial ambience condition is missing for date %d time %d.\n",
+              currDate,
+              currTime);
+    } else {
+      setWthCtm(pCxState, amb_init);
+    }
   }
 
   // Get project information needed for this case.
@@ -345,10 +348,13 @@ void runContam(std::string const& sim_id,
   // Run through the simulation one time step at a time.
   while (t_curr < simTime.sim_end) {
     t_curr += simTime.step_size;
-    [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
-    if (updated) {
-      setWthCtm(pCxState, amb_curr);
-      // printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
+    if (ambs.size() == 1u) {
+      auto& amb = ambs[0];
+      [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
+      if (updated) {
+        setWthCtm(pCxState, amb_curr);
+        // printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
+      }
     }
     // Run next time step.
     cxiDoCoSimStep(pCxState, 1);

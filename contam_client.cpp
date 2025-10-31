@@ -101,7 +101,7 @@ void ContamState::Clear()
   sim_id.clear();
   sim_step = 0u;
   rank = -1;
-  contam_params.clear();
+  //contam_params.clear();
   client_params.clear();
 }
 
@@ -293,18 +293,23 @@ private:
 };
 
 void set_ambience(ContamRequest& request,
-                  std::vector<AmbienceSample> const& amb_series)
+                  std::vector<std::vector<AmbienceSample>> const& ambiences)
 {
-  request.mutable_amb_series()->Reserve(amb_series.size());
-  for (auto const& as : amb_series) {
-    auto sample_ptr = request.add_amb_series();
-    sample_ptr->set_time(as.time);
-    sample_ptr->set_temperature(as.temperature);
-    sample_ptr->set_pressure(as.pressure);
-    sample_ptr->set_wind_speed(as.wind_speed);
-    sample_ptr->set_wind_direction(as.wind_direction);
-    sample_ptr->mutable_mass_fraction()->Assign(as.mass_fraction.begin(),
-                                                as.mass_fraction.end());
+  request.mutable_ambiences()->Reserve(ambiences.size());
+
+  for (auto const& amb : ambiences) {
+    auto ambience_ptr = request.add_ambiences();
+    ambience_ptr->mutable_amb_series()->Reserve(amb.size());
+    for (auto const& as : amb) {
+      auto sample_ptr = ambience_ptr->add_amb_series();
+      sample_ptr->set_time(as.time);
+      sample_ptr->set_temperature(as.temperature);
+      sample_ptr->set_pressure(as.pressure);
+      sample_ptr->set_wind_speed(as.wind_speed);
+      sample_ptr->set_wind_direction(as.wind_direction);
+      sample_ptr->mutable_mass_fraction()->Assign(as.mass_fraction.begin(),
+                                                  as.mass_fraction.end());
+    }
   }
 }
 
@@ -330,7 +335,7 @@ ContamResponse ContamServerClient::RunContam()
   request.set_rst(ctmState.client_params.of_rst);
   request.set_sim(ctmState.client_params.of_sim);
   request.set_xlog(ctmState.client_params.of_xlog);
-  set_ambience(request, ctmState.contam_params.amb_series);
+  set_ambience(request, ctmState.contam_params.ambiences);
 
   // Reponse received from the server
   ContamReply reply;
