@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 #if !defined(CLIENT_ONLY) || (CLIENT_ONLY == 0)
 #include "types.h"  // Contam types: IX = int32_t, R8 = double
@@ -30,9 +31,16 @@ struct AmbienceSample {
   CTM_R8 pressure;        ///< barometric pressure in Pa
   CTM_R8 wind_speed;      ///< in m/s
   CTM_R8 wind_direction;  ///< in degree
-  CTM_R8 mass_fraction;   ///< in kgc/kga
+  // TODO: change the vector type to array
+  std::vector<CTM_R8> mass_fraction;  ///< in kgc/kga
 
   AmbienceSample();
+  AmbienceSample(CTM_IX t,
+                 CTM_R8 temp,
+                 CTM_R8 pres,
+                 CTM_R8 wspd,
+                 CTM_R8 wdir,
+                 std::vector<CTM_R8> const& mf);
   AmbienceSample(
     CTM_IX t, CTM_R8 temp, CTM_R8 pres, CTM_R8 wspd, CTM_R8 wdir, CTM_R8 mf);
   AmbienceSample(AmbienceSample const& other) = default;
@@ -58,7 +66,7 @@ inline bool operator<(const CTM_IX t, AmbienceSample const& s)
 /*! \brief Contam ambience data over time */
 class AmbienceData {
 protected:
-  bool m_initialized;  ///< Tell if already initialized
+  bool m_initialized;  ///< Tell if already initialized (i.e., finalized)
   bool m_been_found;   ///< sample has been found at least once
   std::vector<AmbienceSample>::const_iterator m_curr;  ///< Current index
   std::vector<AmbienceSample> m_data;  ///< Samples ordered by the time
@@ -73,9 +81,9 @@ public:
   bool init();
   bool is_initialized() const { return m_initialized; }
   /// Add an ambience sample before initialized
-  void insert(AmbienceSample const& s);
+  bool insert(AmbienceSample const& s);
   /// Add an ambience sample before initialized
-  void insert(AmbienceSample&& s);
+  bool insert(AmbienceSample&& s);
 
   /** Return the last known abience sample earlier than or equal to t.
       Also, indicate where a sample was found and if a new sample was found */

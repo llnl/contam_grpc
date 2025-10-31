@@ -149,7 +149,8 @@ void setWthCtm(void* state, AmbienceSample const& amb)
     exit(4);
   if (cxiSetAmbtWndDir(state, (R4) amb.wind_direction))
     exit(5);
-  if (cxiSetAmbtMassFraction(state, 0, amb.mass_fraction))
+  if (amb.mass_fraction.empty()
+      || cxiSetAmbtMassFraction(state, 0, amb.mass_fraction[0]))
     exit(6);
 }
 

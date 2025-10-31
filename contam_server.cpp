@@ -52,7 +52,8 @@ bool set_ambience(
                             as.pressure(),
                             as.wind_speed(),
                             as.wind_direction(),
-                            as.mass_fraction());
+                            std::vector<CTM_R8> {as.mass_fraction().begin(),
+                                                 as.mass_fraction().end()});
     }
   }
   bool ok = amb.init();

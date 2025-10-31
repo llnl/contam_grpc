@@ -19,7 +19,21 @@ AmbienceSample::AmbienceSample()
     pressure(0.0),
     wind_speed(0.0),
     wind_direction(0.0),
-    mass_fraction(0.0)
+    mass_fraction {}
+{}
+
+AmbienceSample::AmbienceSample(CTM_IX t,
+                               CTM_R8 temp,
+                               CTM_R8 pres,
+                               CTM_R8 wspd,
+                               CTM_R8 wdir,
+                               std::vector<CTM_R8> const& mf)
+  : time(t),
+    temperature(temp),
+    pressure(pres),
+    wind_speed(wspd),
+    wind_direction(wdir),
+    mass_fraction(mf)
 {}
 
 AmbienceSample::AmbienceSample(
@@ -29,17 +43,22 @@ AmbienceSample::AmbienceSample(
     pressure(pres),
     wind_speed(wspd),
     wind_direction(wdir),
-    mass_fraction(mf)
+    mass_fraction {mf}
 {}
 
 std::string AmbienceSample::to_string() const
 {
+  using std::string;
   using std::to_string;
-  return std::string("{time: ") + to_string(time) + ", temperature: "
-         + to_string(temperature) + ", pressure: " + to_string(pressure)
-         + ", wind_speed: " + to_string(wind_speed)
-         + ", wind_direction: " + to_string(wind_direction)
-         + ", mass_fraction: " + to_string(mass_fraction) + "}";
+  string str = "{time: " + to_string(time) + ", temperature: "
+               + to_string(temperature) + ", pressure: " + to_string(pressure)
+               + ", wind_speed: " + to_string(wind_speed) + ", wind_direction: "
+               + to_string(wind_direction) + ", mass_fraction: [";
+  for (auto const& mf : mass_fraction) {
+    str += to_string(mf);
+  }
+  str += "}";
+  return str;
 }
 
 AmbienceData::AmbienceData() : m_initialized(false), m_been_found(false)
@@ -62,9 +81,9 @@ std::vector<AmbienceSample> const& AmbienceData::data() const
 bool AmbienceData::init()
 {
   m_initialized = true;
-  if (m_data.empty()) {  // TODO: should this return true?
+  if (m_data.empty()) {
     std::cerr << "No ambience data\n";
-    return false;
+    return true;
   }
   std::sort(m_data.begin(), m_data.end());
   m_curr = m_data.begin();
@@ -78,20 +97,36 @@ bool AmbienceData::init()
   return true;
 }
 
-void AmbienceData::insert(AmbienceSample const& s)
+bool AmbienceData::insert(AmbienceSample const& s)
 {
+  // After being finalized, no more sample can be added.
   if (m_initialized) {
-    return;
+    return false;
+  }
+  // Check number of contaminatns represetend in mass fraction per sample is the
+  // same
+  if (!m_data.empty()
+      && (m_data.begin()->mass_fraction.size() != s.mass_fraction.size())) {
+    return false;
   }
   m_data.emplace_back(s);
+  return true;
 }
 
-void AmbienceData::insert(AmbienceSample&& s)
+bool AmbienceData::insert(AmbienceSample&& s)
 {
+  // After being finalized, no more sample can be added.
   if (m_initialized) {
-    return;
+    return false;
+  }
+  // Check number of contaminatns represetend in mass fraction per sample is the
+  // same
+  if (!m_data.empty()
+      && (m_data.begin()->mass_fraction.size() != s.mass_fraction.size())) {
+    return false;
   }
   m_data.emplace_back(std::move(s));
+  return true;
 }
 
 std::tuple<AmbienceSample, bool, bool> AmbienceData::get_sample(const CTM_IX t)

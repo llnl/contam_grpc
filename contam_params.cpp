@@ -131,12 +131,14 @@ static void set_contam_options(Contam_Params const& cfg,
   cp.amb_series.reserve(n);
 
   for (auto const& s : cfg.amb_series()) {
-    cp.amb_series.emplace_back(s.time(),
-                               s.temperature(),
-                               s.pressure(),
-                               s.wind_speed(),
-                               s.wind_direction(),
-                               s.mass_fraction());
+    auto const& mf = s.mass_fraction();
+    cp.amb_series.emplace_back(
+      s.time(),
+      s.temperature(),
+      s.pressure(),
+      s.wind_speed(),
+      s.wind_direction(),
+      std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
   }
 
   if (verbose) {

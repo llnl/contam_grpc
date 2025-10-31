@@ -303,7 +303,8 @@ void set_ambience(ContamRequest& request,
     sample_ptr->set_pressure(as.pressure);
     sample_ptr->set_wind_speed(as.wind_speed);
     sample_ptr->set_wind_direction(as.wind_direction);
-    sample_ptr->set_mass_fraction(as.mass_fraction);
+    sample_ptr->mutable_mass_fraction()->Assign(as.mass_fraction.begin(),
+                                                as.mass_fraction.end());
   }
 }
 

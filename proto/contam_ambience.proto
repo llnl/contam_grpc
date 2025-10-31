@@ -8,5 +8,5 @@ message Ambience_Sample {
   double pressure = 3; ///< in Pa
   double wind_speed = 4; ///< in m/s
   double wind_direction = 5; ///< in degree
-  double mass_fraction = 6; ///< in kgc/kga
+  repeated double mass_fraction = 6; ///< in kgc/kga
 }
