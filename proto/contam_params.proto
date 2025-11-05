@@ -7,7 +7,12 @@ import "contam_ambience.proto";
 message Sim_Params {
   message Contam_Params {
     string prj_filename = 1; ///< Contam project filename
-    repeated contam.ambience.Contam_Ambience ambiences = 2; ///< Set of ambience timeseries
+    /** The wind pressure calculation method.
+     *  0 = Set wind pressure of individual envelope flow paths (default)
+     *  1 = CONTAM computes wind pressures (WTH-like) and ambient Mass Fractions (CTM-like).
+     */
+    uint32 wind_pressure_wo_envelop_mode = 2;
+    repeated contam.ambience.Contam_Ambience ambiences = 3; ///< Set of ambience timeseries
   }
 
   message Client_Params {
