@@ -1,0 +1,55 @@
+# The schema of this prototext file is defined in 'contam_params.proto'
+# The command-line option takes higher precedence when a same variable
+# is specified by both ia prototext file and a cmd-line option.
+
+contam_params {
+  #prj_filename: ""
+  ambiences: [
+    {
+      amb_series: [
+        { time: 0,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 3600,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 3900,	pressure: 2.508542,	mass_fraction: [ 0.01 0 ] },
+        { time: 21600,	pressure: 2.508542,	mass_fraction: [ 0.01 0 ] },
+        { time: 21900,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 43200,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 43500,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 46800,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 47100,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 64800,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 65100,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 86400,	pressure: -2.508542,	mass_fraction: [ 0 0 ] }
+      ]
+    },
+    {
+      amb_series: [
+        { time: 0,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 3600,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 3900,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 21600,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 21900,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 43200,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 43500,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 46800,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 47100,	pressure: 2.508542,	mass_fraction: [ 0 0.02 ] },
+        { time: 64800,	pressure: 2.508542,	mass_fraction: [ 0 0.02 ] },
+        { time: 65100,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
+        { time: 86400,	pressure: 2.508542,	mass_fraction: [ 0 0 ] }
+      ]
+    }
+  ]
+}
+
+# The default value of unspecified boolean variable is false
+client_params {
+  of_out: true
+  of_err: true
+  of_ach: true
+  of_cex: true
+  of_csm: true
+  of_log: true
+  of_rst: true
+  of_sim: true
+  of_xlog: true
+  of_prefix: "ctm"
+}

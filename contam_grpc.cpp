@@ -21,8 +21,11 @@ int main(int argc, char* argv[])
   Contam_gRPC::contamClient();
   std::cout << "Time: " << Contam_gRPC::get_time() - t_start << std::endl;
 
+  Contam_gRPC::contamClientShutDown();
+
 #if defined(USE_MPI)
   MPI_Finalize();
 #endif
+
   return 0;
 }

@@ -424,4 +424,9 @@ ContamResponse contamClient()
   return reply;
 }
 
+void contamClientShutDown()
+{
+  google::protobuf::ShutdownProtobufLibrary();
+}
+
 }  // namespace Contam_gRPC
