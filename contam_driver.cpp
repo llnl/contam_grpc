@@ -275,6 +275,7 @@ void runContam(std::string const& sim_id,
                std::string const& out_fname,
                std::string const& err_fname,
                std::vector<AmbienceData>&& ambs,
+               unsigned wp_wo_envelop,
                bool verbose)
 {
 #if defined(STDIO_REDIRECT)
@@ -301,7 +302,8 @@ void runContam(std::string const& sim_id,
 
   //-----  Set wind pressure mode to WTH/CTM method.
   // Must be called before cxiSetupSimulation().
-  cxiSetWindPressureMode(pCxState, 0);
+  if (wp_wo_envelop == 1u)
+    cxiSetWindPressureMode(pCxState, 0);
 
   // Call cxiSetupSimulation() to read the project, set up nodes, links, etc.,
   //  and tell it to use the co-simulation mode which will then cause

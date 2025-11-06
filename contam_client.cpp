@@ -335,6 +335,7 @@ ContamResponse ContamServerClient::RunContam()
   request.set_rst(ctmState.client_params.of_rst);
   request.set_sim(ctmState.client_params.of_sim);
   request.set_xlog(ctmState.client_params.of_xlog);
+  request.set_wp_wo_envelop(ctmState.contam_params.wp_wo_envelop);
   set_ambience(request, ctmState.contam_params.ambiences);
 
   // Reponse received from the server

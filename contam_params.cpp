@@ -18,13 +18,17 @@ namespace Contam_gRPC {
 void ContamParams::clear()
 {
   prj_filename.clear();
+  wp_wo_envelop = 0;
   ambiences.clear();
 }
 
 std::string ContamParams::to_string() const
 {
   std::string str =
-    "{\n  prj_file: " + prj_filename + "\n  ambiences:\n    [\n";
+    "{\n  prj_file: " + prj_filename +
+    "\n  wp_wo_envelop: " +
+    std::to_string(wp_wo_envelop) +
+    "\n  ambiences:\n    [\n";
   for (auto const& amb_series : ambiences) {
     str += "      { amb_series: [ ";
     for (auto const& s : amb_series) {
@@ -154,6 +158,7 @@ static void set_contam_options(Contam_Params const& cfg,
                                bool verbose = false)
 {
   cp.prj_filename = cfg.prj_filename();
+  cp.wp_wo_envelop = cfg.wp_wo_envelop();
 
   set_ambience(cp.ambiences, cfg.ambiences(), cfg.ambiences_size());
 

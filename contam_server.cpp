@@ -112,6 +112,7 @@ class ContamServerServiceImpl final : public ContamServer::Service {
               stdout_fname,
               stderr_fname,
               std::move(ambs),
+              request->wp_wo_envelop(),
               verbose);
     unlink(prj_fname.c_str());
 

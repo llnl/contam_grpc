@@ -15,6 +15,7 @@ namespace Contam_gRPC {
 
 struct ContamParams {
   std::string prj_filename;                ///< Contam project filename
+  unsigned wp_wo_envelop; ///< Simulation mode regarding wind pressure
   std::vector<std::vector<AmbienceSample>> ambiences;  ///< Set of ambience timeseries
 
   void clear();
