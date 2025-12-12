@@ -190,6 +190,10 @@ if (NOT CLIENT_ONLY)
   set_target_properties(${SERVER_NAME} PROPERTIES
     INSTALL_RPATH $ENV{CONTAM_LIB_DIR})
 
+  # Define the BUILD_DEBUG macro only for the Debug build type
+  target_compile_definitions(${SERVER_NAME} PRIVATE
+    $<$<CONFIG:Debug>:BUILD_DEBUG>)
+
   list(APPEND PRJ_INSTALL_TARGETS ${SERVER_NAME})
 endif (NOT CLIENT_ONLY)
 
@@ -230,6 +234,10 @@ set_target_properties(${CLIENT_NAME} PROPERTIES PUBLIC_HEADER contam_client.h)
 #set_target_properties(${CLIENT_NAME} PROPERTIES
 #  BUILD_RPATH "$ORIGIN"
 #  INSTALL_RPATH "$ORIGIN")
+
+# Define the BUILD_DEBUG macro only for the Debug build type
+target_compile_definitions(${CLIENT_NAME} PRIVATE
+  $<$<CONFIG:Debug>:BUILD_DEBUG>)
 
 if (gRPC_INSTALL)
   list(APPEND CONTAM_CLIENT_TARGETS

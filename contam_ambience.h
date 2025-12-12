@@ -34,8 +34,10 @@ using CTM_R8 = double;
  */
 
 struct AmbienceSample {
-  static constexpr CTM_R8 default_temperature = 293.15; // 20 degree celsius in Kelvin
-  static constexpr CTM_R8 default_pressure = 101000; // Barometric pressure in Pa
+  static constexpr CTM_R8 default_temperature =
+    293.15;  // 20 degree celsius in Kelvin
+  static constexpr CTM_R8 default_pressure =
+    101000;  // Barometric pressure in Pa
   static constexpr CTM_R8 default_wind_speed = 0.0;
   static constexpr CTM_R8 default_wind_direction = 0.0;
 
@@ -57,6 +59,12 @@ struct AmbienceSample {
                  std::vector<CTM_R8> const& mf);
   AmbienceSample(
     CTM_IX t, CTM_R8 temp, CTM_R8 pres, CTM_R8 wspd, CTM_R8 wdir, CTM_R8 mf);
+
+  // For envelope wind pressure and contaminant mass fractions
+  AmbienceSample(CTM_IX t, CTM_R8 pres, std::vector<CTM_R8> const& mf);
+  // For envelope wind pressure and contaminant mass fractions
+  AmbienceSample(CTM_IX t, CTM_R8 pres, CTM_R8 mf);
+
   AmbienceSample(AmbienceSample const& other) = default;
   AmbienceSample(AmbienceSample&& other) = default;
   AmbienceSample& operator=(AmbienceSample const& other) = default;
@@ -105,6 +113,9 @@ public:
 
   std::string to_string(unsigned indent = 0u) const;
 };
+
+std::string to_string(std::vector<AmbienceSample> const& data,
+                      unsigned indent = 0u);
 
 }  // namespace Contam_gRPC
 #endif

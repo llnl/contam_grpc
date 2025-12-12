@@ -51,6 +51,26 @@ AmbienceSample::AmbienceSample(
     mass_fraction {mf}
 {}
 
+AmbienceSample::AmbienceSample(CTM_IX t,
+                               CTM_R8 pres,
+                               std::vector<CTM_R8> const& mf)
+  : time(t),
+    temperature(default_temperature),
+    pressure(pres),
+    wind_speed(default_wind_speed),
+    wind_direction(default_wind_direction),
+    mass_fraction(mf)
+{}
+
+AmbienceSample::AmbienceSample(CTM_IX t, CTM_R8 pres, CTM_R8 mf)
+  : time(t),
+    temperature(default_temperature),
+    pressure(pres),
+    wind_speed(default_wind_speed),
+    wind_direction(default_wind_direction),
+    mass_fraction {mf}
+{}
+
 std::string AmbienceSample::to_string() const
 {
   using std::string;
@@ -59,10 +79,12 @@ std::string AmbienceSample::to_string() const
                + to_string(temperature) + ", pressure: " + to_string(pressure)
                + ", wind_speed: " + to_string(wind_speed) + ", wind_direction: "
                + to_string(wind_direction) + ", mass_fraction: [";
+  unsigned i = 0u;
   for (auto const& mf : mass_fraction) {
-    str += to_string(mf);
+    auto mf_str = to_string(mf);
+    str += ((i++ > 0u) ? (", " + mf_str) : mf_str);
   }
-  str += "}";
+  str += "]}";
   return str;
 }
 
@@ -157,16 +179,21 @@ std::tuple<AmbienceSample, bool, bool> AmbienceData::get_sample(const CTM_IX t)
   return {*(--m_curr), true, true};
 }
 
-std::string AmbienceData::to_string(unsigned indent) const
+std::string to_string(std::vector<AmbienceSample> const& data, unsigned indent)
 {
   const std::string str_indent = std::string(indent, ' ');
   const std::string str_indent_inner = std::string(indent + 2, ' ');
   std::string str = str_indent + "[\n";
-  for (const auto& as : m_data) {
+  for (auto const& as : data) {
     str += str_indent_inner + as.to_string() + ",\n";
   }
   str += str_indent + ']';
   return str;
+}
+
+std::string AmbienceData::to_string(unsigned indent) const
+{
+  return Contam_gRPC::to_string(m_data, indent);
 }
 
 }  // namespace Contam_gRPC

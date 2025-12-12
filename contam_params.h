@@ -14,12 +14,13 @@
 namespace Contam_gRPC {
 
 struct ContamParams {
-  std::string prj_filename;                ///< Contam project filename
-  unsigned wp_wo_envelop; ///< Simulation mode regarding wind pressure
-  std::vector<std::vector<AmbienceSample>> ambiences;  ///< Set of ambience timeseries
+  std::string prj_filename;  ///< Contam project filename
+  unsigned wp_wo_envelope;   ///< Simulation mode regarding wind pressure
+  std::vector<std::vector<AmbienceSample>>
+    ambiences;  ///< Set of ambience timeseries
 
   void clear();
-  std::string to_string() const;
+  std::string to_string(unsigned indent = 0u) const;
 };
 
 struct ClientParams {
@@ -36,7 +37,7 @@ struct ClientParams {
 
   ClientParams();
   void clear();
-  std::string to_string() const;
+  std::string to_string(unsigned indent = 0u) const;
 };
 
 std::tuple<ContamParams, ClientParams>

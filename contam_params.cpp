@@ -18,24 +18,25 @@ namespace Contam_gRPC {
 void ContamParams::clear()
 {
   prj_filename.clear();
-  wp_wo_envelop = 0;
+  wp_wo_envelope = 0;
   ambiences.clear();
 }
 
-std::string ContamParams::to_string() const
+std::string ContamParams::to_string(unsigned indent) const
 {
-  std::string str =
-    "{\n  prj_file: " + prj_filename +
-    "\n  wp_wo_envelop: " +
-    std::to_string(wp_wo_envelop) +
-    "\n  ambiences:\n    [\n";
+  using std::string;
+  const string str_indent = string(indent, ' ');
+  const string str_indent_inner = string(indent + 2, ' ');
+  string str = str_indent + "{\n" + str_indent + "  prj_file: " + prj_filename
+               + "\n" + str_indent
+               + "  wp_wo_envelope: " + std::to_string(wp_wo_envelope) + "\n"
+               + str_indent + "  ambiences:\n" + str_indent_inner + "[\n";
   for (auto const& amb_series : ambiences) {
-    str += "      { amb_series: [ ";
-    for (auto const& s : amb_series) {
-      str += s.to_string() + " ] } ,\n";
-    }
+    str += str_indent_inner + "  {\n" + str_indent_inner + "    amb_series:\n";
+    str += Contam_gRPC::to_string(amb_series, 8) + "\n" + str_indent_inner
+           + "  },\n";
   }
-  str += "    ]\n}";
+  str += str_indent_inner + "]\n" + str_indent + "}";
 
   return str;
 }
@@ -59,21 +60,24 @@ void ClientParams::clear()
   of_prefix.clear();
 }
 
-std::string ClientParams::to_string() const
+std::string ClientParams::to_string(unsigned indent) const
 {
   using std::string;
+  const string str_indent = string(indent, ' ');
+  const string str_indent_inner = string(indent + 2, ' ');
 
-  std::string str = string("{\n")
-                    + "  of_out: " + string(of_out ? "true\n" : "false\n")
-                    + "  of_err: " + string(of_err ? "true\n" : "false\n")
-                    + "  of_ach: " + string(of_ach ? "true\n" : "false\n")
-                    + "  of_cex: " + string(of_cex ? "true\n" : "false\n")
-                    + "  of_csm: " + string(of_csm ? "true\n" : "false\n")
-                    + "  of_log: " + string(of_log ? "true\n" : "false\n")
-                    + "  of_rst: " + string(of_rst ? "true\n" : "false\n")
-                    + "  of_sim: " + string(of_sim ? "true\n" : "false\n")
-                    + "  of_xlog: " + string(of_xlog ? "true\n" : "false\n")
-                    + "  of_prefix: " + of_prefix + "\n}";
+  string str =
+    str_indent + string("{\n") + str_indent_inner
+    + "of_out: " + string(of_out ? "true\n" : "false\n") + str_indent_inner
+    + "of_err: " + string(of_err ? "true\n" : "false\n") + str_indent_inner
+    + "of_ach: " + string(of_ach ? "true\n" : "false\n") + str_indent_inner
+    + "of_cex: " + string(of_cex ? "true\n" : "false\n") + str_indent_inner
+    + "of_csm: " + string(of_csm ? "true\n" : "false\n") + str_indent_inner
+    + "of_log: " + string(of_log ? "true\n" : "false\n") + str_indent_inner
+    + "of_rst: " + string(of_rst ? "true\n" : "false\n") + str_indent_inner
+    + "of_sim: " + string(of_sim ? "true\n" : "false\n") + str_indent_inner
+    + "of_xlog: " + string(of_xlog ? "true\n" : "false\n") + str_indent_inner
+    + "of_prefix: " + of_prefix + "\n" + str_indent + "}";
   return str;
 }
 
@@ -129,26 +133,51 @@ using Sim_Params = contam::params::Sim_Params;
 using Contam_Params = contam::params::Sim_Params::Contam_Params;
 using Client_Params = contam::params::Sim_Params::Client_Params;
 
-void set_ambience(std::vector<std::vector<AmbienceSample>>& ambiences,
-                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
-                  int ambiences_size)
+void set_ambience(
+  std::vector<std::vector<AmbienceSample>>& ambiences,
+  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
+    proto_ambiences,
+  int ambiences_size)
 {
   size_t n = static_cast<size_t>(ambiences_size);
   ambiences.reserve(n);
 
-  for (const auto& proto_amb : proto_ambiences) {
+  for (auto const& proto_amb : proto_ambiences) {
     auto& amb_series = ambiences.emplace_back();
     amb_series.reserve(proto_amb.amb_series_size());
 
     for (auto const& s : proto_amb.amb_series()) {
       auto const& mf = s.mass_fraction();
-      amb_series.emplace_back(
-        s.time(),
-        s.temperature(),
-        s.pressure(),
-        s.wind_speed(),
-        s.wind_direction(),
-        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+      amb_series.emplace_back(s.time(),
+                              s.temperature(),
+                              s.pressure(),
+                              s.wind_speed(),
+                              s.wind_direction(),
+                              std::vector<CTM_R8> {s.mass_fraction().begin(),
+                                                   s.mass_fraction().end()});
+    }
+  }
+}
+
+void set_envelope(
+  std::vector<std::vector<AmbienceSample>>& ambiences,
+  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
+    proto_ambiences,
+  int ambiences_size)
+{
+  size_t n = static_cast<size_t>(ambiences_size);
+  ambiences.reserve(n);
+
+  for (auto const& proto_amb : proto_ambiences) {
+    auto& amb_series = ambiences.emplace_back();
+    amb_series.reserve(proto_amb.amb_series_size());
+
+    for (auto const& s : proto_amb.amb_series()) {
+      auto const& mf = s.mass_fraction();
+      amb_series.emplace_back(s.time(),
+                              s.pressure(),
+                              std::vector<CTM_R8> {s.mass_fraction().begin(),
+                                                   s.mass_fraction().end()});
     }
   }
 }
@@ -158,13 +187,19 @@ static void set_contam_options(Contam_Params const& cfg,
                                bool verbose = false)
 {
   cp.prj_filename = cfg.prj_filename();
-  cp.wp_wo_envelop = cfg.wp_wo_envelop();
+  cp.wp_wo_envelope = cfg.wp_wo_envelope();
 
-  set_ambience(cp.ambiences, cfg.ambiences(), cfg.ambiences_size());
-
-  if (verbose) {
-    std::cout << cp.to_string() << std::endl;
+  if (cp.wp_wo_envelope == 1) {
+    set_ambience(cp.ambiences, cfg.ambiences(), cfg.ambiences_size());
+  } else {
+    set_envelope(cp.ambiences, cfg.ambiences(), cfg.ambiences_size());
   }
+
+#if defined(BUILD_DEBUG)
+  if (verbose) {
+    std::cout << "contam_params: " << cp.to_string() << std::endl;
+  }
+#endif
 }
 
 static void set_client_options(Client_Params const& cfg,
@@ -182,9 +217,11 @@ static void set_client_options(Client_Params const& cfg,
   cp.of_xlog = cfg.of_xlog();
   cp.of_prefix = cfg.of_prefix();
 
+#if defined(BUILD_DEBUG)
   if (verbose) {
-    std::cout << cp.to_string() << std::endl;
+    std::cout << "client_params: " << cp.to_string() << std::endl;
   }
+#endif
 }
 
 std::tuple<ContamParams, ClientParams>
@@ -193,17 +230,28 @@ read_proto_params(std::string const& filename, bool verbose)
   Sim_Params sim_params;
   read_prototext(filename, false, sim_params);
 
+#if defined(BUILD_DEBUG)
   if (verbose) {
-    std::string str;
+    using namespace std;
+    string str;
     google::protobuf::TextFormat::PrintToString(sim_params, &str);
-    std::cout << "---- Prototext '" << filename << "' read ----" << std::endl
-              << str << std::endl;
+    cout << "google::protobuf::TextFormat::PrintToString():" << endl
+         << str << endl
+         << endl;
+    cout << endl << "---- Prototext '" << filename << "' read ----" << endl;
   }
+#endif
 
   ContamParams contam_p;
   ClientParams client_p;
   set_contam_options(sim_params.contam_params(), contam_p, verbose);
   set_client_options(sim_params.client_params(), client_p, verbose);
+
+#if defined(BUILD_DEBUG)
+  if (verbose) {
+    std::cout << "---- end of the '" + filename + "' ----" << std::endl;
+  }
+#endif
 
   return {contam_p, client_p};
 }

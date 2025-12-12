@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include <cstdlib>
+
 #include "contam_client.h"
 #if defined(USE_MPI)
 #include <mpi.h>
@@ -17,15 +19,15 @@ int main(int argc, char* argv[])
 #endif
 
   double t_start = Contam_gRPC::get_time();
-  Contam_gRPC::initContamClientState(my_rank);
-  Contam_gRPC::contamClient();
+  if (!Contam_gRPC::initContamClientState(my_rank)) {
+    return EXIT_FAILURE;
+  }
+  Contam_gRPC::runContamClient();
   std::cout << "Time: " << Contam_gRPC::get_time() - t_start << std::endl;
-
-  Contam_gRPC::contamClientShutDown();
 
 #if defined(USE_MPI)
   MPI_Finalize();
 #endif
 
-  return 0;
+  return EXIT_SUCCESS;
 }

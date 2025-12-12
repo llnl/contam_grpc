@@ -45,13 +45,13 @@ void pickContamArgs(int argc, char** argv);
 
 /*! \brief Set MPI rank \p r to label per-rank output filename unique.
  * */
-void initContamClientState(int r);
+bool initContamClientState(int r);
 
 /*! \brief Run Comtam client */
-ContamResponse contamClient();
+ContamResponse runContamClient();
 
 /*! \brief Shut down Comtam client */
-void contamClientShutDown();
+void shutDownContamClient();
 
 }  // namespace Contam_gRPC
 #endif

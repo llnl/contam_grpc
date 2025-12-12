@@ -28,6 +28,7 @@
 ABSL_FLAG(std::string, ctm_target, "localhost:50051", "Server address");
 ABSL_FLAG(std::string, ctm_prj_file, "", "Contam project filename");
 ABSL_FLAG(std::string, ctm_of_prefix, "", "Prefix to contam output filenames");
+ABSL_FLAG(bool, ctm_dryrun, false, "client-side dryrun");
 ABSL_FLAG(absl::optional<bool>,
           ctm_out,
           absl::nullopt,
@@ -86,14 +87,17 @@ struct ContamState {
   ContamParams contam_params;
   ClientParams client_params;
   std::string of_prefix;
+  bool dryrun;
+  std::unique_ptr<ContamServer::Stub> stub_;
 
   ContamState();
   void Clear();
-  void InitState(int r);
+  bool InitState(int r);
   std::string to_string() const;
 };
 
-ContamState::ContamState() : sim_step(0u), rank(-1)
+ContamState::ContamState()
+  : sim_step(0u), rank(-1), dryrun(false), stub_(nullptr)
 {}
 
 void ContamState::Clear()
@@ -101,8 +105,9 @@ void ContamState::Clear()
   sim_id.clear();
   sim_step = 0u;
   rank = -1;
-  //contam_params.clear();
+  // contam_params.clear();
   client_params.clear();
+  dryrun = false;
 }
 
 void comment_on_overriden_params(bool& overriden)
@@ -114,7 +119,7 @@ void comment_on_overriden_params(bool& overriden)
   std::cerr << "Overriding prototext params via command-line arguments\n";
 }
 
-void ContamState::InitState(int r)
+bool ContamState::InitState(int r)
 {
   sim_id = getUniqStr(rank = r);
   sim_step = 0u;
@@ -129,10 +134,11 @@ void ContamState::InitState(int r)
   if (!ctm_proto.empty()) {
     std::tie(contam_params, client_params) =
       read_proto_params(ctm_proto, ctm_verbose);
-    if (ctm_verbose) {
-      cerr << "---- end of the '" + ctm_proto + "' ----" << endl;
-    }
   }
+
+  /* This comes after ctm_proto handling as prototext configuration
+     file may or may not specify prj_filename. The command line option
+     ctm_prj_file overrides the prototext-based configuration. */
 
   auto const prj_filename_tmp = absl::GetFlag(FLAGS_ctm_prj_file);
   if (!prj_filename_tmp.empty()) {
@@ -141,115 +147,155 @@ void ContamState::InitState(int r)
       comment_on_overriden_params(overriden);
       cerr << "  Contam project file: " + contam_params.prj_filename << endl;
     }
+  } else if (contam_params.prj_filename.empty()) {
+    cerr << "Contam project file is not specified" << endl;
+    return false;
   }
+
+  dryrun = absl::GetFlag(FLAGS_ctm_dryrun);
 
   absl::optional<bool> ctm_out = absl::GetFlag(FLAGS_ctm_out);
   if (ctm_out.has_value()) {
     client_params.of_out = ctm_out.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_out: "
                 + string(client_params.of_out ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_err = absl::GetFlag(FLAGS_ctm_err);
   if (ctm_err.has_value()) {
     client_params.of_err = ctm_err.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_err: "
                 + string(client_params.of_err ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_ach = absl::GetFlag(FLAGS_ctm_ach);
   if (ctm_ach.has_value()) {
     client_params.of_ach = ctm_ach.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_ach: "
                 + string(client_params.of_ach ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_cex = absl::GetFlag(FLAGS_ctm_cex);
   if (ctm_cex.has_value()) {
     client_params.of_cex = ctm_cex.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_cex: "
                 + string(client_params.of_cex ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_csm = absl::GetFlag(FLAGS_ctm_csm);
   if (ctm_csm.has_value()) {
     client_params.of_csm = ctm_csm.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_csm: "
                 + string(client_params.of_csm ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_log = absl::GetFlag(FLAGS_ctm_log);
   if (ctm_log.has_value()) {
     client_params.of_log = ctm_log.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_log: "
                 + string(client_params.of_log ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_rst = absl::GetFlag(FLAGS_ctm_rst);
   if (ctm_rst.has_value()) {
     client_params.of_rst = ctm_rst.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_rst: "
                 + string(client_params.of_rst ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_sim = absl::GetFlag(FLAGS_ctm_sim);
   if (ctm_sim.has_value()) {
     client_params.of_sim = ctm_sim.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_sim: "
                 + string(client_params.of_sim ? "true\n" : "false\n");
     }
+#endif
   }
 
   absl::optional<bool> ctm_xlog = absl::GetFlag(FLAGS_ctm_xlog);
   if (ctm_xlog.has_value()) {
     client_params.of_xlog = ctm_xlog.value();
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_xlog: "
                 + string(client_params.of_xlog ? "true\n" : "false\n");
     }
+#endif
   }
 
   auto const of_prefix_tmp = absl::GetFlag(FLAGS_ctm_of_prefix);
   if (!of_prefix_tmp.empty()) {
     client_params.of_prefix = of_prefix_tmp;
+#if defined(BUILD_DEBUG)
     if (ctm_verbose) {
       comment_on_overriden_params(overriden);
       cerr << "  of_prefix: " + client_params.of_prefix << endl;
     }
+#endif
   }
+
+  std::string target_str = absl::GetFlag(FLAGS_ctm_target);
+
+  // Instantiate the client. RPCs are created out of a channel, that models
+  // a connection to an endpoint.
+  // The channel here isn't authenticated (thus InsecureChannelCredentials())
+  stub_ = ContamServer::NewStub(
+    grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
+
+  std::cout << "================ Contam setup ================\n";
+  std::cout << to_string() << std::endl;
+  std::cout << "==============================================\n";
+
+  return true;
 }
 
 std::string ContamState::to_string() const
 {
-  std::string str = std::string("{\n") + "  sim_id: " + sim_id + "\n"
-                    + "  sim_step: " + std::to_string(sim_step) + "\n"
-                    + "  rank: " + std::to_string(rank) + "\n"
-                    + "  contam_params: \n" + contam_params.to_string() + "\n"
-                    + "  client_params: \n" + client_params.to_string() + "\n}";
+  std::string str =
+    std::string("{\n") + "  sim_id: " + sim_id + "\n" + "  sim_step: "
+    + std::to_string(sim_step) + "\n" + "  rank: " + std::to_string(rank) + "\n"
+    + "  client stub: " + (stub_ ? "set" : "not set") + "\n"
+    + "  contam_params: \n" + contam_params.to_string(2u) + "\n"
+    + "  client_params: \n" + client_params.to_string(2u) + "\n}";
   return str;
 }
 
@@ -265,6 +311,7 @@ void ContaStateInit()
 void ContaStateFini()
 {
   ctmState.Clear();
+  google::protobuf::ShutdownProtobufLibrary();
 }
 
 void pickContamArgs(int argc, char** argv)
@@ -272,25 +319,10 @@ void pickContamArgs(int argc, char** argv)
   absl::ParseCommandLine(argc, argv);
 }
 
-void initContamClientState(int rank)
+bool initContamClientState(int rank)
 {
-  ctmState.InitState(rank);
+  return ctmState.InitState(rank);
 }
-
-class ContamServerClient {
-public:
-  ContamServerClient(std::shared_ptr<Channel> channel)
-    : stub_(ContamServer::NewStub(channel))
-  {}
-
-  /*! \brief Sends the client's request and presents the response received from
-   * the server.
-   */
-  ContamResponse RunContam();
-
-private:
-  std::unique_ptr<ContamServer::Stub> stub_;
-};
 
 void set_ambience(ContamRequest& request,
                   std::vector<std::vector<AmbienceSample>> const& ambiences)
@@ -313,11 +345,29 @@ void set_ambience(ContamRequest& request,
   }
 }
 
-ContamResponse ContamServerClient::RunContam()
+void set_envelope(ContamRequest& request,
+                  std::vector<std::vector<AmbienceSample>> const& ambiences)
 {
-  std::cout << "================ Contam setup ================\n";
-  std::cout << ctmState.to_string() << std::endl;
-  std::cout << "==============================================\n";
+  request.mutable_ambiences()->Reserve(ambiences.size());
+  for (auto const& amb : ambiences) {
+    auto ambience_ptr = request.add_ambiences();
+    ambience_ptr->mutable_amb_series()->Reserve(amb.size());
+    for (auto const& as : amb) {
+      auto sample_ptr = ambience_ptr->add_amb_series();
+      sample_ptr->set_time(as.time);
+      sample_ptr->set_pressure(as.pressure);
+      sample_ptr->mutable_mass_fraction()->Assign(as.mass_fraction.begin(),
+                                                  as.mass_fraction.end());
+    }
+  }
+}
+
+/*! \brief Sends the client's request and presents the response received from
+ * the server.
+ */
+ContamResponse runContamClient()
+{
+  ContamResponse response;
 
   auto const prj = loadFile(ctmState.contam_params.prj_filename);
   std::cout << "Loaded Contam project file '"
@@ -335,8 +385,18 @@ ContamResponse ContamServerClient::RunContam()
   request.set_rst(ctmState.client_params.of_rst);
   request.set_sim(ctmState.client_params.of_sim);
   request.set_xlog(ctmState.client_params.of_xlog);
-  request.set_wp_wo_envelop(ctmState.contam_params.wp_wo_envelop);
-  set_ambience(request, ctmState.contam_params.ambiences);
+  request.set_wp_wo_envelope(ctmState.contam_params.wp_wo_envelope);
+
+  if (ctmState.contam_params.wp_wo_envelope == 1) {
+    set_ambience(request, ctmState.contam_params.ambiences);
+  } else if (ctmState.contam_params.wp_wo_envelope == 0) {
+    set_envelope(request, ctmState.contam_params.ambiences);
+  }
+
+  if (ctmState.dryrun) {
+    response.status = true;
+    return response;
+  }
 
   // Reponse received from the server
   ContamReply reply;
@@ -346,7 +406,7 @@ ContamResponse ContamServerClient::RunContam()
   ClientContext context;
 
   // The actual RPC
-  Status status = stub_->RunContam(&context, request, &reply);
+  Status status = ctmState.stub_->RunContam(&context, request, &reply);
 
   auto const& of_prefix = ctmState.client_params.of_prefix;
   mkdir_as_needed(of_prefix.c_str());
@@ -396,38 +456,16 @@ ContamResponse ContamServerClient::RunContam()
     writeFile(uniq_str + ".xlog", reply.xlog(), std::ios_base::app);
   }
 
-  ContamResponse response;
   if (status.ok()) {
+    std::cout << "Contam RPC reply status: success" << std::endl;
     response.status = true;
   } else {
+    std::cout << "Contam RPC reply status: fail" << std::endl;
     response.status = false;
     response.err_str =
       std::to_string(status.error_code()) + ": " + status.error_message();
   }
   return response;
-}
-
-ContamResponse contamClient()
-{
-  std::string target_str = absl::GetFlag(FLAGS_ctm_target);
-
-  // Instantiate the client. RPCs are created out of a channel, that models
-  // a connection to an endpoint.
-  // The channel here isn't authenticated (thus InsecureChannelCredentials())
-  ContamServerClient contam_connector(
-    grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
-
-  auto const reply = contam_connector.RunContam();
-
-  std::cout << "Contam RPC reply status: "
-            << (reply.status ? "success" : "fail") << std::endl;
-
-  return reply;
-}
-
-void contamClientShutDown()
-{
-  google::protobuf::ShutdownProtobufLibrary();
 }
 
 }  // namespace Contam_gRPC

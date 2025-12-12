@@ -12,7 +12,7 @@ void runContam(std::string const& sim_id,
                std::string const& out_fname,
                std::string const& err_fname,
                std::vector<AmbienceData>&& amb,
-               unsigned wp_wo_envelop = 0,
+               unsigned wp_wo_envelope = 0,
                bool verbose = false);
 
 }  // namespace Contam_gRPC

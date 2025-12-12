@@ -76,6 +76,40 @@ bool set_ambience(std::vector<AmbienceData>& ambiences,
   return true;
 }
 
+bool set_envelope(std::vector<AmbienceData>& ambiences,
+                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
+                  int ambiences_size,
+                  bool const verbose = false)
+{
+  size_t n = static_cast<size_t>(ambiences_size);
+  ambiences.clear();
+  ambiences.reserve(n);
+
+  for (const auto& proto_amb : proto_ambiences) {
+    auto& amb_data = ambiences.emplace_back();
+    auto& amb_series = amb_data.data();
+    amb_series.reserve(proto_amb.amb_series_size());
+
+    for (auto const& s : proto_amb.amb_series()) {
+      auto const& mf = s.mass_fraction();
+      amb_series.emplace_back(
+        s.time(),
+        s.pressure(),
+        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+    }
+    if (!amb_data.init()) {
+      return false;
+    }
+  }
+  if (verbose) {
+    printf("amb_series:\n[\n");
+    for (const auto& ad : ambiences) {
+      printf("%s,\n", ad.to_string(2).c_str());
+    }
+    printf("]\n");
+  }
+  return true;
+}
 
 // Logic and data behind the server's behavior.
 class ContamServerServiceImpl final : public ContamServer::Service {
@@ -100,10 +134,18 @@ class ContamServerServiceImpl final : public ContamServer::Service {
     std::cout << "Contam project received: " << prj_fname << std::endl;
 
     bool const verbose = absl::GetFlag(FLAGS_ctm_verbose);
+    unsigned const wp_wo_envelope = request->wp_wo_envelope();
 
     std::vector<AmbienceData> ambs;
-    if (!set_ambience(
-          ambs, request->ambiences(), request->ambiences_size(), verbose)) {
+    bool ok = false;
+
+    if (wp_wo_envelope == 1) {
+      ok = set_ambience(ambs, request->ambiences(), request->ambiences_size(), verbose);
+    } else if (wp_wo_envelope == 0) {
+      ok = set_envelope(ambs, request->ambiences(), request->ambiences_size(), verbose);
+    }
+
+    if (!ok) {
       std::cerr << "Failed to set ambience!" << std::endl;
     }
 
@@ -112,7 +154,7 @@ class ContamServerServiceImpl final : public ContamServer::Service {
               stdout_fname,
               stderr_fname,
               std::move(ambs),
-              request->wp_wo_envelop(),
+              wp_wo_envelope,
               verbose);
     unlink(prj_fname.c_str());
 
