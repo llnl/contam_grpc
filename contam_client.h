@@ -50,8 +50,5 @@ bool initContamClientState(int r);
 /*! \brief Run Comtam client */
 ContamResponse runContamClient();
 
-/*! \brief Shut down Comtam client */
-void shutDownContamClient();
-
 }  // namespace Contam_gRPC
 #endif
