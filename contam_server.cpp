@@ -4,10 +4,10 @@
 #include <thread>  // this_thread
 
 #include "contam_driver.h"
+#include <google/protobuf/repeated_ptr_field.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
-#include <google/protobuf/repeated_ptr_field.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
@@ -37,38 +37,61 @@ ABSL_FLAG(std::string,
 
 namespace Contam_gRPC {
 
+#if defined(BUILD_DEBUG)
+  #define NOTICE_ON_PACKED_OUTFILE(_ext_) \
+  if (verbose) { \
+    printf("------ " #_ext_ " packed for simulation (%s) !\n", \
+    request->sim_id().c_str()); \
+  }
+#else
+  #define NOTICE_ON_PACKED_OUTFILE(_ext_)
+#endif
 
-bool set_ambience(std::vector<AmbienceData>& ambiences,
-                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
-                  int ambiences_size,
-                  bool const verbose = false)
+#define LOAD_AND_DELETE_OUTFILE(_ext_) do { \
+  const std::string fname = uniq_str + "." #_ext_; \
+  if (request->_ext_()) { \
+    auto const content = loadFile(fname); \
+    reply->set_##_ext_(content.data(), content.size()); \
+  } \
+  unlink(fname.c_str()); \
+  NOTICE_ON_PACKED_OUTFILE(_ext_) \
+} while (0)
+
+
+bool set_ambience(
+  std::vector<AmbienceData>& ambiences,
+  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
+    proto_ambiences,
+  int ambiences_size,
+  bool const verbose = false)
 {
   size_t n = static_cast<size_t>(ambiences_size);
   ambiences.clear();
   ambiences.reserve(n);
 
-  for (const auto& proto_amb : proto_ambiences) {
+  for (auto const& proto_amb : proto_ambiences) {
     auto& amb_data = ambiences.emplace_back();
     auto& amb_series = amb_data.data();
     amb_series.reserve(proto_amb.amb_series_size());
 
     for (auto const& s : proto_amb.amb_series()) {
       auto const& mf = s.mass_fraction();
-      amb_series.emplace_back(
-        s.time(),
-        s.temperature(),
-        s.pressure(),
-        s.wind_speed(),
-        s.wind_direction(),
-        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+      amb_series.emplace_back(s.time(),
+                              s.temperature(),
+                              s.pressure(),
+                              s.wind_speed(),
+                              s.wind_direction(),
+                              std::vector<CTM_R8> {s.mass_fraction().begin(),
+                                                   s.mass_fraction().end()});
     }
     if (!amb_data.init()) {
       return false;
     }
   }
   if (verbose) {
+    printf("------ Ambience set\n");
     printf("amb_series:\n[\n");
-    for (const auto& ad : ambiences) {
+    for (auto const& ad : ambiences) {
       printf("%s,\n", ad.to_string(2).c_str());
     }
     printf("]\n");
@@ -76,34 +99,37 @@ bool set_ambience(std::vector<AmbienceData>& ambiences,
   return true;
 }
 
-bool set_envelope(std::vector<AmbienceData>& ambiences,
-                  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const& proto_ambiences,
-                  int ambiences_size,
-                  bool const verbose = false)
+bool set_envelope(
+  std::vector<AmbienceData>& ambiences,
+  google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
+    proto_ambiences,
+  int ambiences_size,
+  bool const verbose = false)
 {
   size_t n = static_cast<size_t>(ambiences_size);
   ambiences.clear();
   ambiences.reserve(n);
 
-  for (const auto& proto_amb : proto_ambiences) {
+  for (auto const& proto_amb : proto_ambiences) {
     auto& amb_data = ambiences.emplace_back();
     auto& amb_series = amb_data.data();
     amb_series.reserve(proto_amb.amb_series_size());
 
     for (auto const& s : proto_amb.amb_series()) {
       auto const& mf = s.mass_fraction();
-      amb_series.emplace_back(
-        s.time(),
-        s.pressure(),
-        std::vector<CTM_R8> {s.mass_fraction().begin(), s.mass_fraction().end()});
+      amb_series.emplace_back(s.time(),
+                              s.pressure(),
+                              std::vector<CTM_R8> {s.mass_fraction().begin(),
+                                                   s.mass_fraction().end()});
     }
     if (!amb_data.init()) {
       return false;
     }
   }
   if (verbose) {
+    printf("------ Envelop set\n");
     printf("amb_series:\n[\n");
-    for (const auto& ad : ambiences) {
+    for (auto const& ad : ambiences) {
       printf("%s,\n", ad.to_string(2).c_str());
     }
     printf("]\n");
@@ -115,113 +141,92 @@ bool set_envelope(std::vector<AmbienceData>& ambiences,
 class ContamServerServiceImpl final : public ContamServer::Service {
   Status RunContam(ServerContext* context,
                    ContamRequest const* request,
-                   ContamReply* reply) override
-  {
-    const std::string of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
-    mkdir_as_needed(of_prefix.c_str());
-
-    auto const uniq_str =
-      of_prefix
-      + ((!of_prefix.empty() && of_prefix.back() != '/') ? "/ctm." : "ctm.")
-      + request->sim_id() + '.' + std::to_string(request->sim_step());
-    std::cout << "Prefix of output files: " << uniq_str << std::endl;
-
-    std::string prj_fname = uniq_str + ".prj";
-    std::string stdout_fname = uniq_str + ".out";
-    std::string stderr_fname = uniq_str + ".err";
-
-    writeFile(prj_fname, request->prj());
-    std::cout << "Contam project received: " << prj_fname << std::endl;
-
-    bool const verbose = absl::GetFlag(FLAGS_ctm_verbose);
-    unsigned const wp_wo_envelope = request->wp_wo_envelope();
-
-    std::vector<AmbienceData> ambs;
-    bool ok = false;
-
-    if (wp_wo_envelope == 1) {
-      ok = set_ambience(ambs, request->ambiences(), request->ambiences_size(), verbose);
-    } else if (wp_wo_envelope == 0) {
-      ok = set_envelope(ambs, request->ambiences(), request->ambiences_size(), verbose);
-    }
-
-    if (!ok) {
-      std::cerr << "Failed to set ambience!" << std::endl;
-    }
-
-    runContam(request->sim_id(),
-              prj_fname,
-              stdout_fname,
-              stderr_fname,
-              std::move(ambs),
-              wp_wo_envelope,
-              verbose);
-    unlink(prj_fname.c_str());
-
-    {
-      auto const content = loadFile(stdout_fname);
-      reply->set_stdout(content.data(), content.size());
-    }
-    unlink(stdout_fname.c_str());
-
-    {
-      auto const content = loadFile(stderr_fname);
-      reply->set_stderr(content.data(), content.size());
-    }
-    unlink(stderr_fname.c_str());
-
-    const std::string ach_fname = uniq_str + ".ach";
-    if (request->ach()) {
-      auto const content = loadFile(ach_fname);
-      reply->set_ach(content.data(), content.size());
-    }
-    unlink(ach_fname.c_str());
-
-    const std::string cex_fname = uniq_str + ".cex";
-    if (request->cex()) {
-      auto const content = loadFile(cex_fname);
-      reply->set_cex(content.data(), content.size());
-    }
-    unlink(cex_fname.c_str());
-
-    const std::string csm_fname = uniq_str + ".csm";
-    if (request->csm()) {
-      auto const content = loadFile(csm_fname);
-      reply->set_csm(content.data(), content.size());
-    }
-    unlink(csm_fname.c_str());
-
-    const std::string log_fname = uniq_str + ".log";
-    if (request->log()) {
-      auto const content = loadFile(log_fname);
-      reply->set_log(content.data(), content.size());
-    }
-    unlink(log_fname.c_str());
-
-    const std::string rst_fname = uniq_str + ".rst";
-    if (request->rst()) {
-      auto const content = loadFile(rst_fname);
-      reply->set_rst(content.data(), content.size());
-    }
-    unlink(rst_fname.c_str());
-
-    const std::string sim_fname = uniq_str + ".sim";
-    if (request->sim()) {
-      auto const content = loadFile(sim_fname);
-      reply->set_sim(content.data(), content.size());
-    }
-    unlink(sim_fname.c_str());
-
-    const std::string xlog_fname = uniq_str + ".xlog";
-    if (request->xlog()) {
-      auto const content = loadFile(xlog_fname);
-      reply->set_xlog(content.data(), content.size());
-    }
-    unlink(xlog_fname.c_str());
-
-    return Status::OK;
-  }
+                   ContamReply* reply) override;
 };
+
+Status ContamServerServiceImpl::RunContam(ServerContext* context,
+                 ContamRequest const* request,
+                 ContamReply* reply)
+{
+  const std::string of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
+  mkdir_as_needed(of_prefix.c_str());
+
+  auto const uniq_str =
+    of_prefix
+    + ((!of_prefix.empty() && of_prefix.back() != '/') ? "/ctm." : "ctm.")
+    + request->sim_id() + '.' + std::to_string(request->sim_step());
+  std::cout << "Prefix of output files: " << uniq_str << std::endl;
+
+  std::string prj_fname = uniq_str + ".prj";
+  std::string stdout_fname = uniq_str + ".out";
+  std::string stderr_fname = uniq_str + ".err";
+
+  writeFile(prj_fname, request->prj());
+  std::cout << "Contam project received: " << prj_fname << std::endl;
+
+  bool const verbose = absl::GetFlag(FLAGS_ctm_verbose);
+  unsigned const wp_wo_envelope = request->wp_wo_envelope();
+
+  std::vector<AmbienceData> ambs;
+  bool ok = false;
+
+  if (wp_wo_envelope == 1) {
+    ok = set_ambience(
+      ambs, request->ambiences(), request->ambiences_size(), verbose);
+  } else if (wp_wo_envelope == 0) {
+    ok = set_envelope(
+      ambs, request->ambiences(), request->ambiences_size(), verbose);
+  }
+
+  if (!ok) {
+    std::cerr << "Failed to set ambience!" << std::endl;
+  }
+
+  ok = runContam(request->sim_id(),
+                 prj_fname,
+                 stdout_fname,
+                 stderr_fname,
+                 std::move(ambs),
+                 wp_wo_envelope,
+                 verbose);
+
+  if (verbose) {
+    printf("------ Simulation (%s) %s!\n",
+           request->sim_id().c_str(),
+           (ok? "complete" : "failed"));
+  }
+
+  unlink(prj_fname.c_str());
+
+  {
+    auto const content = loadFile(stdout_fname);
+    reply->set_stdout(content.data(), content.size());
+  }
+  unlink(stdout_fname.c_str());
+
+  {
+    auto const content = loadFile(stderr_fname);
+    reply->set_stderr(content.data(), content.size());
+  }
+  unlink(stderr_fname.c_str());
+
+  if (verbose) {
+    printf("------ stdout/stderr packed for simulation (%s) !\n", request->sim_id().c_str());
+  }
+
+  LOAD_AND_DELETE_OUTFILE(ach);
+  LOAD_AND_DELETE_OUTFILE(cex);
+  LOAD_AND_DELETE_OUTFILE(csm);
+  LOAD_AND_DELETE_OUTFILE(log);
+  LOAD_AND_DELETE_OUTFILE(rst);
+  LOAD_AND_DELETE_OUTFILE(sim);
+  LOAD_AND_DELETE_OUTFILE(xlog);
+
+  std::fflush(stdout);
+  std::fflush(stderr);
+
+  return Status::OK;
+}
 
 void RunServer(uint16_t port)
 {

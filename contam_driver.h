@@ -7,7 +7,7 @@
 
 namespace Contam_gRPC {
 
-void runContam(std::string const& sim_id,
+bool runContam(std::string const& sim_id,
                std::string const& prj_fname,
                std::string const& out_fname,
                std::string const& err_fname,

@@ -71,25 +71,10 @@ std::tuple<void*, bool> get_or_create_state(std::string const& sim_id)
 }
 #endif
 
-/*
-AmbienceSample amb_samples[] = {
-  {0, 293.15, 101325, 0.0, 0.0, 0.0},                // 00:00
-  {18000, 293.15, 101325, 0.0, 0.0, 0.0},            // 05:00
-  {18300, 293.15, 101325, 0.0, 0.0, 0.0023254},      // 05:05
-  {21900, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 06:05
-  {22200, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 06:10
-  {50400, 293.15, 101325, 7.397, 270.0, 0.0023254},  // 14:00
-  {50700, 293.15, 101325, 0.0, 0.0, 0.0},            // 14:05
-  {57600, 293.15, 101325, 0.0, 0.0, 0.0},            // 16:00
-  {57900, 293.15, 101325, 7.397, 90.0, 0.0},         // 16:05
-  {82800, 293.15, 101325, 7.397, 90.0, 0.0},         // 23:00
-  {83100, 293.15, 101325, 0.0, 0.0, 0.0},            // 23:05
-  {86400, 293.15, 101325, 0.0, 0.0, 0.0}             // 24:00
-};
-*/
 
 #define CTM_DT2SEC(_CTM_DATE_, _CTM_TIME_)                                     \
   (((_CTM_DATE_) -1) * 86400 + (_CTM_TIME_))
+
 struct SimTime {
   IX step_size;
   IX sim_begin;
@@ -138,7 +123,7 @@ std::string SimTime::to_string() const
          + "\n  num_steps: " + std::to_string(num_steps) + "\n}";
 }
 
-/// Set the ambience conditions using the SetAmbt API.
+/// Set the ambience conditions using the cxiSetAmbt API.
 void setWthCtm(void* state, AmbienceSample const& amb)
 {
   if (cxiSetAmbtTemperature(state, (R4) amb.temperature))
@@ -152,6 +137,19 @@ void setWthCtm(void* state, AmbienceSample const& amb)
   if (amb.mass_fraction.empty()
       || cxiSetAmbtMassFraction(state, 0, amb.mass_fraction[0]))
     exit(6);
+}
+
+/// Set the envelope conditions using the cxiSetEnvelope API.
+void setEnvelopePathsWPC(void* state, IX envIndex, AmbienceSample const& env)
+{
+  if (cxiSetEnvelopeWP(state, envIndex, (R4) env.pressure))
+    exit(1);
+
+  const size_t n_ctms = env.mass_fraction.size();
+  for (size_t i = 0u; i < n_ctms; ++i) {
+    if (cxiSetEnvelopeMF(state, envIndex, i, env.mass_fraction[i]))
+      exit(2);
+  }
 }
 
 // Check if it's time to change to the next set of Ambient data.
@@ -270,7 +268,7 @@ void getZoneMf(void* state, IX date, IX time, IX nz, IX nc)
   }
 }
 
-void runContam(std::string const& sim_id,
+bool runContam(std::string const& sim_id,
                std::string const& prj_fname,
                std::string const& out_fname,
                std::string const& err_fname,
@@ -278,11 +276,17 @@ void runContam(std::string const& sim_id,
                unsigned wp_wo_envelope,
                bool verbose)
 {
-#if defined(STDIO_REDIRECT)
+#if STDIO_REDIRECT
   int saved_stdout = dup(fileno(stdout));
   int saved_stderr = dup(fileno(stderr));
-  std::freopen(out_fname.c_str(), "w", stdout);
-  std::freopen(err_fname.c_str(), "w", stderr);
+  if (std::freopen(out_fname.c_str(), "w", stdout) == NULL) {
+    fprintf(stderr, "Error: Failed to reopen stdin\n");
+    exit(1);
+  }
+  if (std::freopen(err_fname.c_str(), "w", stderr) == NULL) {
+    fprintf(stderr, "Error: Failed to reopen stderr\n");
+    exit(1);
+  }
 #endif
 
   enum eSimStage simStage = simStage_Initial;
@@ -302,8 +306,16 @@ void runContam(std::string const& sim_id,
 
   //-----  Set wind pressure mode to WTH/CTM method.
   // Must be called before cxiSetupSimulation().
-  if (wp_wo_envelope == 1u)
+  if (wp_wo_envelope == 1u) {
     cxiSetWindPressureMode(pCxState, 0);
+  } else if (wp_wo_envelope == 0u) {
+    cxiSetWindPressureMode(pCxState, 1);
+  } else {
+    fprintf(stderr, "Incorrect wp_wo_envelope (%u), which is for "
+            "the second argument of cxiSetWindPressureMode()\n",
+            wp_wo_envelope);
+    return false;
+  }
 
   // Call cxiSetupSimulation() to read the project, set up nodes, links, etc.,
   //  and tell it to use the co-simulation mode which will then cause
@@ -327,16 +339,37 @@ void runContam(std::string const& sim_id,
 
   // Set initial Ambient conditions.
   IX t_curr = CTM_DT2SEC(currDate, currTime);
-  if (ambs.size() == 1u) {
+  if (wp_wo_envelope == 1u) {
+    if (ambs.size() != 1u) {
+      fprintf(stderr, "Incorrect number of ambience series (%lu)\n", ambs.size());
+      return false;
+    }
     auto& amb = ambs[0];
     [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
-    if (!found_init) {
+    if (!found_init) { // Use the default
       fprintf(stderr,
               "Initial ambience condition is missing for date %d time %d.\n",
               currDate,
               currTime);
     } else {
       setWthCtm(pCxState, amb_init);
+    }
+  } else {
+    const size_t n_envs = ambs.size();
+    if (n_envs == 0u) {
+      fprintf(stderr, "No envelope series\n");
+      return false;
+    }
+    for (size_t i = 0u; i < n_envs; ++i) {
+      auto& env = ambs[i];
+      [[maybe_unused]] auto [env_init, found_init, _] = env.get_sample(t_curr);
+      if (!found_init) { // Use the default
+        fprintf(stderr,
+                "Initial envelop (%lu-th) condition is missing for date %d time %d.\n",
+                i, currDate, currTime);
+      } else {
+        setEnvelopePathsWPC(pCxState, i, env_init);
+      }
     }
   }
 
@@ -350,12 +383,21 @@ void runContam(std::string const& sim_id,
   // Run through the simulation one time step at a time.
   while (t_curr < simTime.sim_end) {
     t_curr += simTime.step_size;
-    if (ambs.size() == 1u) {
+    if (wp_wo_envelope == 1u) {
       auto& amb = ambs[0];
       [[maybe_unused]] auto [amb_curr, _, updated] = amb.get_sample(t_curr);
       if (updated) {
         setWthCtm(pCxState, amb_curr);
         // printf("Ambience updated: %s\n", amb_curr.to_string().c_str());
+      }
+    } else {
+      const size_t n_envs = ambs.size();
+      for (size_t i = 0u; i < n_envs; ++i) {
+        auto& env = ambs[i];
+        [[maybe_unused]] auto [env_curr, _, updated] = env.get_sample(t_curr);
+        if (updated) {
+          setEnvelopePathsWPC(pCxState, i, env_curr);
+        }
       }
     }
     // Run next time step.
@@ -383,13 +425,15 @@ void runContam(std::string const& sim_id,
   std::fflush(stdout);
   std::fflush(stderr);
 
-#if defined(STDIO_REDIRECT)
+#if STDIO_REDIRECT
   // Restore original stdout
   dup2(saved_stdout, fileno(stdout));
   close(saved_stdout);
   dup2(saved_stderr, fileno(stderr));
   close(saved_stderr);
 #endif
+
+  return true;
 }
 
 }  // namespace Contam_gRPC
