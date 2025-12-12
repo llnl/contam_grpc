@@ -4,7 +4,7 @@
 
 contam_params {
   #prj_filename: ""
-  wp_wo_envelop: 1
+  wp_wo_envelope: 1
   ambiences: [
     {
       amb_series: [

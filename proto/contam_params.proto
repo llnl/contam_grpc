@@ -11,7 +11,7 @@ message Sim_Params {
      *  0 = Set wind pressure of individual envelope flow paths (default)
      *  1 = CONTAM computes wind pressures (WTH-like) and ambient Mass Fractions (CTM-like).
      */
-    uint32 wp_wo_envelop = 2;
+    uint32 wp_wo_envelope = 2;
     repeated contam.ambience.Contam_Ambience ambiences = 3; ///< Set of ambience timeseries
   }
 

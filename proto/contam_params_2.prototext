@@ -4,38 +4,38 @@
 
 contam_params {
   #prj_filename: ""
-  #wp_wo_envelop: 0
+  #wp_wo_envelope: 0
   ambiences: [
     {
       amb_series: [
-        { time: 0,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 3600,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 3900,	pressure: 2.508542,	mass_fraction: [ 0.01 0 ] },
-        { time: 21600,	pressure: 2.508542,	mass_fraction: [ 0.01 0 ] },
-        { time: 21900,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 43200,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 43500,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 46800,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 47100,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 64800,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 65100,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 86400,	pressure: -2.508542,	mass_fraction: [ 0 0 ] }
+        { time: 0,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 3600,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 3900,	pressure: 2.508542,	mass_fraction: [ 0.01, 0 ] },
+        { time: 21600,	pressure: 2.508542,	mass_fraction: [ 0.01, 0 ] },
+        { time: 21900,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 43200,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 43500,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 46800,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 47100,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 64800,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 65100,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 86400,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] }
       ]
     },
     {
       amb_series: [
-        { time: 0,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 3600,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 3900,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 21600,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 21900,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 43200,	pressure: -2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 43500,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 46800,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 47100,	pressure: 2.508542,	mass_fraction: [ 0 0.02 ] },
-        { time: 64800,	pressure: 2.508542,	mass_fraction: [ 0 0.02 ] },
-        { time: 65100,	pressure: 2.508542,	mass_fraction: [ 0 0 ] },
-        { time: 86400,	pressure: 2.508542,	mass_fraction: [ 0 0 ] }
+        { time: 0,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 3600,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 3900,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 21600,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 21900,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 43200,	pressure: -2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 43500,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 46800,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 47100,	pressure: 2.508542,	mass_fraction: [ 0, 0.02 ] },
+        { time: 64800,	pressure: 2.508542,	mass_fraction: [ 0, 0.02 ] },
+        { time: 65100,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] },
+        { time: 86400,	pressure: 2.508542,	mass_fraction: [ 0, 0 ] }
       ]
     }
   ]

@@ -25,7 +25,7 @@ message ContamRequest {
   bool rst = 8;
   bool sim = 9;
   bool xlog = 10;
-  uint32 wp_wo_envelop = 11;
+  uint32 wp_wo_envelope = 11;
   repeated contam.ambience.Contam_Ambience ambiences = 12; ///< Set of ambience timeseries
 }
 
