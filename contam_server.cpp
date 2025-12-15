@@ -38,25 +38,25 @@ ABSL_FLAG(std::string,
 namespace Contam_gRPC {
 
 #if defined(BUILD_DEBUG)
-  #define NOTICE_ON_PACKED_OUTFILE(_ext_) \
-  if (verbose) { \
-    printf("------ " #_ext_ " packed for simulation (%s) !\n", \
-    request->sim_id().c_str()); \
+#define NOTICE_ON_PACKED_OUTFILE(_ext_)                                        \
+  if (verbose) {                                                               \
+    printf("------ " #_ext_ " packed for simulation (%s) !\n",                 \
+           request->sim_id().c_str());                                         \
   }
 #else
-  #define NOTICE_ON_PACKED_OUTFILE(_ext_)
+#define NOTICE_ON_PACKED_OUTFILE(_ext_)
 #endif
 
-#define LOAD_AND_DELETE_OUTFILE(_ext_) do { \
-  const std::string fname = uniq_str + "." #_ext_; \
-  if (request->_ext_()) { \
-    auto const content = loadFile(fname); \
-    reply->set_##_ext_(content.data(), content.size()); \
-  } \
-  unlink(fname.c_str()); \
-  NOTICE_ON_PACKED_OUTFILE(_ext_) \
-} while (0)
-
+#define LOAD_AND_DELETE_OUTFILE(_ext_)                                         \
+  do {                                                                         \
+    const std::string fname = uniq_str + "." #_ext_;                           \
+    if (request->_ext_()) {                                                    \
+      auto const content = loadFile(fname);                                    \
+      reply->set_##_ext_(content.data(), content.size());                      \
+    }                                                                          \
+    unlink(fname.c_str());                                                     \
+    NOTICE_ON_PACKED_OUTFILE(_ext_)                                            \
+  } while (0)
 
 bool set_ambience(
   std::vector<AmbienceData>& ambiences,
@@ -145,8 +145,8 @@ class ContamServerServiceImpl final : public ContamServer::Service {
 };
 
 Status ContamServerServiceImpl::RunContam(ServerContext* context,
-                 ContamRequest const* request,
-                 ContamReply* reply)
+                                          ContamRequest const* request,
+                                          ContamReply* reply)
 {
   const std::string of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
   mkdir_as_needed(of_prefix.c_str());
@@ -191,9 +191,10 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
                  verbose);
 
   if (verbose) {
+    setvbuf(stdout, NULL, _IONBF, 0);
     printf("------ Simulation (%s) %s!\n",
            request->sim_id().c_str(),
-           (ok? "complete" : "failed"));
+           (ok ? "complete" : "failed"));
   }
 
   unlink(prj_fname.c_str());
@@ -201,18 +202,24 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
   {
     auto const content = loadFile(stdout_fname);
     reply->set_stdout(content.data(), content.size());
+    if (verbose) {
+      printf("------ stdout\n");
+      fwrite(content.data(), sizeof(char), content.size(), stdout);
+      fputc('\n', stdout);
+    }
   }
-  unlink(stdout_fname.c_str());
+  //unlink(stdout_fname.c_str());
 
   {
     auto const content = loadFile(stderr_fname);
     reply->set_stderr(content.data(), content.size());
+    if (verbose) {
+      printf("------ stderr\n");
+      fwrite(content.data(), sizeof(char), content.size(), stderr);
+      fputc('\n', stderr);
+    }
   }
-  unlink(stderr_fname.c_str());
-
-  if (verbose) {
-    printf("------ stdout/stderr packed for simulation (%s) !\n", request->sim_id().c_str());
-  }
+  //unlink(stderr_fname.c_str());
 
   LOAD_AND_DELETE_OUTFILE(ach);
   LOAD_AND_DELETE_OUTFILE(cex);
@@ -221,6 +228,11 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
   LOAD_AND_DELETE_OUTFILE(rst);
   LOAD_AND_DELETE_OUTFILE(sim);
   LOAD_AND_DELETE_OUTFILE(xlog);
+
+  if (verbose) {
+    printf("------ Packing response of simulation (%s) complete!\n",
+           request->sim_id().c_str());
+  }
 
   std::fflush(stdout);
   std::fflush(stderr);

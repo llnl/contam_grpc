@@ -71,7 +71,6 @@ std::tuple<void*, bool> get_or_create_state(std::string const& sim_id)
 }
 #endif
 
-
 #define CTM_DT2SEC(_CTM_DATE_, _CTM_TIME_)                                     \
   (((_CTM_DATE_) -1) * 86400 + (_CTM_TIME_))
 
@@ -142,13 +141,19 @@ void setWthCtm(void* state, AmbienceSample const& amb)
 /// Set the envelope conditions using the cxiSetEnvelope API.
 void setEnvelopePathsWPC(void* state, IX envIndex, AmbienceSample const& env)
 {
-  if (cxiSetEnvelopeWP(state, envIndex, (R4) env.pressure))
+  auto rc = cxiSetEnvelopeWP(state, envIndex + 1, (R4) env.pressure);
+  if (rc) {
+    printf("cxiSetEnvelopeWP() returned the error code %d\n", rc);
     exit(1);
+  }
 
   const size_t n_ctms = env.mass_fraction.size();
   for (size_t i = 0u; i < n_ctms; ++i) {
-    if (cxiSetEnvelopeMF(state, envIndex, i, env.mass_fraction[i]))
+    auto rc = cxiSetEnvelopeMF(state, envIndex + 1, i, env.mass_fraction[i]);
+    if (rc) {
+      printf("cxiSetEnvelopeMF() returned the error code %d\n", rc);
       exit(2);
+    }
   }
 }
 
@@ -268,17 +273,15 @@ void getZoneMf(void* state, IX date, IX time, IX nz, IX nc)
   }
 }
 
-bool runContam(std::string const& sim_id,
-               std::string const& prj_fname,
-               std::string const& out_fname,
-               std::string const& err_fname,
-               std::vector<AmbienceData>&& ambs,
-               unsigned wp_wo_envelope,
-               bool verbose)
+void start_io_redirection(std::string const& out_fname,
+                          std::string const& err_fname,
+                          int& saved_stdout,
+                          int& saved_stderr)
 {
 #if STDIO_REDIRECT
-  int saved_stdout = dup(fileno(stdout));
-  int saved_stderr = dup(fileno(stderr));
+  printf("\n==========> start IO redirection\n");
+  saved_stdout = dup(fileno(stdout));
+  saved_stderr = dup(fileno(stderr));
   if (std::freopen(out_fname.c_str(), "w", stdout) == NULL) {
     fprintf(stderr, "Error: Failed to reopen stdin\n");
     exit(1);
@@ -288,6 +291,34 @@ bool runContam(std::string const& sim_id,
     exit(1);
   }
 #endif
+}
+
+void stop_io_redirection(int saved_stdout, int saved_stderr)
+{
+  std::fflush(stdout);
+  std::fflush(stderr);
+
+#if STDIO_REDIRECT
+  // Restore original stdout
+  dup2(saved_stdout, fileno(stdout));
+  close(saved_stdout);
+  dup2(saved_stderr, fileno(stderr));
+  close(saved_stderr);
+  printf("\n==========> finish IO redirection\n");
+#endif
+}
+
+bool runContam(std::string const& sim_id,
+               std::string const& prj_fname,
+               std::string const& out_fname,
+               std::string const& err_fname,
+               std::vector<AmbienceData>&& ambs,
+               unsigned wp_wo_envelope,
+               bool verbose)
+{
+  int saved_stdout = -1;
+  int saved_stderr = -1;
+  start_io_redirection(out_fname, err_fname, saved_stdout, saved_stderr);
 
   enum eSimStage simStage = simStage_Initial;
 
@@ -311,9 +342,11 @@ bool runContam(std::string const& sim_id,
   } else if (wp_wo_envelope == 0u) {
     cxiSetWindPressureMode(pCxState, 1);
   } else {
-    fprintf(stderr, "Incorrect wp_wo_envelope (%u), which is for "
+    fprintf(stderr,
+            "Incorrect wp_wo_envelope (%u), which is for "
             "the second argument of cxiSetWindPressureMode()\n",
             wp_wo_envelope);
+    stop_io_redirection(saved_stdout, saved_stderr);
     return false;
   }
 
@@ -341,12 +374,14 @@ bool runContam(std::string const& sim_id,
   IX t_curr = CTM_DT2SEC(currDate, currTime);
   if (wp_wo_envelope == 1u) {
     if (ambs.size() != 1u) {
-      fprintf(stderr, "Incorrect number of ambience series (%lu)\n", ambs.size());
+      fprintf(
+        stderr, "Incorrect number of ambience series (%lu)\n", ambs.size());
+      stop_io_redirection(saved_stdout, saved_stderr);
       return false;
     }
     auto& amb = ambs[0];
     [[maybe_unused]] auto [amb_init, found_init, _] = amb.get_sample(t_curr);
-    if (!found_init) { // Use the default
+    if (!found_init) {  // Use the default
       fprintf(stderr,
               "Initial ambience condition is missing for date %d time %d.\n",
               currDate,
@@ -358,15 +393,19 @@ bool runContam(std::string const& sim_id,
     const size_t n_envs = ambs.size();
     if (n_envs == 0u) {
       fprintf(stderr, "No envelope series\n");
+      stop_io_redirection(saved_stdout, saved_stderr);
       return false;
     }
     for (size_t i = 0u; i < n_envs; ++i) {
       auto& env = ambs[i];
       [[maybe_unused]] auto [env_init, found_init, _] = env.get_sample(t_curr);
-      if (!found_init) { // Use the default
+      if (!found_init) {  // Use the default
         fprintf(stderr,
-                "Initial envelop (%lu-th) condition is missing for date %d time %d.\n",
-                i, currDate, currTime);
+                "Initial envelop (%lu-th) condition is missing for date %d "
+                "time %d.\n",
+                i,
+                currDate,
+                currTime);
       } else {
         setEnvelopePathsWPC(pCxState, i, env_init);
       }
@@ -422,16 +461,7 @@ bool runContam(std::string const& sim_id,
          simStage,
          stateValidity);
 
-  std::fflush(stdout);
-  std::fflush(stderr);
-
-#if STDIO_REDIRECT
-  // Restore original stdout
-  dup2(saved_stdout, fileno(stdout));
-  close(saved_stdout);
-  dup2(saved_stderr, fileno(stderr));
-  close(saved_stderr);
-#endif
+  stop_io_redirection(saved_stdout, saved_stderr);
 
   return true;
 }
