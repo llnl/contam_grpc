@@ -15,6 +15,16 @@ bool checkFilename(std::string const& filename);
 std::string addStrToFilenameBeforeExt(std::string const& filename,
                                       std::string const& str);
 
+/*! \brief Check if a file can be read */
+bool canReadFile(const std::string& filename);
+
+/*! \brief Return the names of files with a specific
+    extension under a directory */
+std::vector<std::string> filesWithExtension(
+    const std::string& ext,
+    const std::string& dir = "./");
+
+/*! \brief Load a file into a vector of characters */
 std::vector<char> loadFile(std::string const& fname);
 
 /*! Write a binary file */

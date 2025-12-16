@@ -38,26 +38,39 @@ ABSL_FLAG(std::string,
 namespace Contam_gRPC {
 
 #if defined(BUILD_DEBUG)
-#define NOTICE_ON_PACKED_OUTFILE(_ext_)                                        \
+#define NOTICE_ON_PACKED_OUTFILE(verbose, sim_id, _val_)                       \
   if (verbose) {                                                               \
-    printf("------ " #_ext_ " packed for simulation (%s) !\n",                 \
-           request->sim_id().c_str());                                         \
+    printf("------ " #_val_ " packed for simulation (%s) !\n", sim_id);        \
   }
 #else
-#define NOTICE_ON_PACKED_OUTFILE(_ext_)
+#define NOTICE_ON_PACKED_OUTFILE(_val_)
 #endif
 
-#define LOAD_AND_DELETE_OUTFILE(_ext_)                                         \
+#define LOAD_AND_SET_REPLY(reply, verbose, sim_id, fname, _val_)               \
   do {                                                                         \
-    const std::string fname = uniq_str + "." #_ext_;                           \
-    if (request->_ext_()) {                                                    \
       auto const content = loadFile(fname);                                    \
-      reply->set_##_ext_(content.data(), content.size());                      \
-    }                                                                          \
-    unlink(fname.c_str());                                                     \
-    NOTICE_ON_PACKED_OUTFILE(_ext_)                                            \
+      (reply)->set_##_val_(content.data(), content.size());                    \
+      if ((reply)->_val_().size() != content.size()) {                         \
+        printf("incorrect length of packed field (" #_val_ "): %lu -> %lu\n",  \
+               content.size(), (reply)->_val_().size());                       \
+      } else if (content.size() == 0ul) {                                      \
+        printf("(" #_val_ ") is empty\n");                                     \
+      } else {                                                                 \
+        NOTICE_ON_PACKED_OUTFILE((verbose), (sim_id), _val_)                   \
+      }                                                                        \
   } while (0)
 
+#define LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, _ext_)      \
+  do {                                                                         \
+    const std::string fname = (uniq_str) + "." #_ext_;                         \
+    if ((request)->_ext_()) {                                                  \
+      const auto sim_id = (request)->sim_id().c_str();                         \
+      LOAD_AND_SET_REPLY((reply), (verbose), sim_id, fname, _ext_);            \
+    }                                                                          \
+    unlink(fname.c_str());                                                     \
+  } while (0)
+
+filesWithExtension()
 bool set_ambience(
   std::vector<AmbienceData>& ambiences,
   google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
@@ -151,15 +164,14 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
   const std::string of_prefix = absl::GetFlag(FLAGS_ctm_of_prefix);
   mkdir_as_needed(of_prefix.c_str());
 
+  auto const sim_id = request->sim_id();
   auto const uniq_str =
     of_prefix
     + ((!of_prefix.empty() && of_prefix.back() != '/') ? "/ctm." : "ctm.")
-    + request->sim_id() + '.' + std::to_string(request->sim_step());
+    + sim_id + '.' + std::to_string(request->sim_step());
   std::cout << "Prefix of output files: " << uniq_str << std::endl;
 
   std::string prj_fname = uniq_str + ".prj";
-  std::string stdout_fname = uniq_str + ".out";
-  std::string stderr_fname = uniq_str + ".err";
 
   writeFile(prj_fname, request->prj());
   std::cout << "Contam project received: " << prj_fname << std::endl;
@@ -182,7 +194,10 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
     std::cerr << "Failed to set ambience!" << std::endl;
   }
 
-  ok = runContam(request->sim_id(),
+  std::string stdout_fname = uniq_str + ".out";
+  std::string stderr_fname = uniq_str + ".err";
+
+  ok = runContam(sim_id,
                  prj_fname,
                  stdout_fname,
                  stderr_fname,
@@ -193,45 +208,29 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
   if (verbose) {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("------ Simulation (%s) %s!\n",
-           request->sim_id().c_str(),
+           sim_id.c_str(),
            (ok ? "complete" : "failed"));
   }
 
   unlink(prj_fname.c_str());
 
-  {
-    auto const content = loadFile(stdout_fname);
-    reply->set_stdout(content.data(), content.size());
-    if (verbose) {
-      printf("------ stdout\n");
-      fwrite(content.data(), sizeof(char), content.size(), stdout);
-      fputc('\n', stdout);
-    }
-  }
-  //unlink(stdout_fname.c_str());
+  LOAD_AND_SET_REPLY(reply, verbose, sim_id.c_str(), stdout_fname, stdout);
+  unlink(stdout_fname.c_str());
+  LOAD_AND_SET_REPLY(reply, verbose, sim_id.c_str(), stderr_fname, stderr);
+  unlink(stderr_fname.c_str());
 
-  {
-    auto const content = loadFile(stderr_fname);
-    reply->set_stderr(content.data(), content.size());
-    if (verbose) {
-      printf("------ stderr\n");
-      fwrite(content.data(), sizeof(char), content.size(), stderr);
-      fputc('\n', stderr);
-    }
-  }
-  //unlink(stderr_fname.c_str());
-
-  LOAD_AND_DELETE_OUTFILE(ach);
-  LOAD_AND_DELETE_OUTFILE(cex);
-  LOAD_AND_DELETE_OUTFILE(csm);
-  LOAD_AND_DELETE_OUTFILE(log);
-  LOAD_AND_DELETE_OUTFILE(rst);
-  LOAD_AND_DELETE_OUTFILE(sim);
-  LOAD_AND_DELETE_OUTFILE(xlog);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, ach);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, cex);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, csm);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, log);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, rst);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, sim);
+  LOAD_AND_DELETE_OUTFILE(request, reply, verbose, uniq_str, xlog);
 
   if (verbose) {
-    printf("------ Packing response of simulation (%s) complete!\n",
-           request->sim_id().c_str());
+    printf("------ Packed response of simulation (%s) "
+           "into a %lu byte-long message!\n",
+           request->sim_id().c_str(), reply->ByteSizeLong());
   }
 
   std::fflush(stdout);

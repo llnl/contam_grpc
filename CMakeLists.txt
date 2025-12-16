@@ -9,12 +9,13 @@ set(APP_NAME "contam_grpc")
 
 set(PRJ_NAME "contam_grpc")
 project(${PRJ_NAME} LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Define project version
 set(PRJ_VERSION_MAJOR 0)
 set(PRJ_VERSION_MINOR 1)
 set(PRJ_VERSION_PATCH 0)
-
 
 
 ################################################################

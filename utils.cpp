@@ -1,8 +1,8 @@
 #include "utils.h"
 
 #include <algorithm>
-#include <filesystem>
 #include <fstream>
+#include <filesystem>
 #include <iterator>
 #include <sstream>
 #ifdef __linux__
@@ -35,6 +35,38 @@ bool checkFilename(std::string const& filename)
     return false;
   }
   return true;
+}
+
+bool canReadFile(const std::string& filename)
+{
+  std::ifstream file(filename);
+  return file.good();
+}
+
+std::vector<std::string> filesWithExtension(
+    const std::string& ext,
+    const std::string& dir)
+{
+  std::vector<std::string> result;
+
+  const std::filesystem::path& fdir = dir;
+
+  if (!std::filesystem::exists(fdir) || !std::filesystem::is_directory(fdir)) {
+    return result;
+  }
+
+  for (const auto& entry : std::filesystem::directory_iterator(fdir))
+  {
+    if (entry.is_regular_file() &&
+        entry.path().extension() == ext)
+    {
+      const auto& fname = entry.path().filename().string();
+      if (canReadFile(fname)) {
+        result.push_back(fname);
+      }
+    }
+  }
+  return result;
 }
 
 std::string addStrToFilenameBeforeExt(std::string const& filename,
