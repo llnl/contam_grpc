@@ -96,13 +96,13 @@ std::vector<char> loadFile(std::string const& fname)
     return std::vector<char> {};
   }
 
-  auto fsize = std::filesystem::file_size(fname);
-  std::vector<char> content(fsize, 0u);
   std::ifstream ifs(fname, std::ios_base::in | std::ios_base::binary);
   if (!ifs) {
     std::cerr << "Cannot open " + fname + " for reading!\n";
     return std::vector<char> {};
   }
+  auto fsize = std::filesystem::file_size(fname);
+  std::vector<char> content(fsize, 0u);
   ifs.read(&content[0], fsize);
   ifs.close();
   return content;

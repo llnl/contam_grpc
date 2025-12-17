@@ -70,7 +70,6 @@ namespace Contam_gRPC {
     unlink(fname.c_str());                                                     \
   } while (0)
 
-filesWithExtension()
 bool set_ambience(
   std::vector<AmbienceData>& ambiences,
   google::protobuf::RepeatedPtrField<contam::ambience::Contam_Ambience> const&
