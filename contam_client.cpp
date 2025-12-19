@@ -80,6 +80,28 @@ using grpc::Status;
 
 namespace Contam_gRPC {
 
+#if defined(BUILD_DEBUG)
+  #define comment_on_overriden_params(verbose, _param_, value) do {        \
+    if (verbose) {                                                         \
+      using namespace std;                                                 \
+      cerr << "Overriding prototext param by cmd arg: of_" #_param_ " = "  \
+           << (value) << endl;                                             \
+    }                                                                      \
+  } while(0)
+#else
+  #define comment_on_overriden_params(verbose, _param_, value)
+#endif
+
+#define SET_CLIENT_PARAM(client_params, verbose, _param_) do {          \
+  absl::optional<bool> opt = absl::GetFlag(FLAGS_ctm_##_param_);        \
+  if (opt.has_value()) {                                                \
+    (client_params).of_##_param_ = opt.value();                         \
+    comment_on_overriden_params(verbose, _param_,                       \
+                                string(opt.value()? "true" : "false")); \
+  }                                                                     \
+} while(0)
+
+
 struct ContamState {
   std::string sim_id;
   unsigned int sim_step;
@@ -110,15 +132,6 @@ void ContamState::Clear()
   dryrun = false;
 }
 
-void comment_on_overriden_params(bool& overriden)
-{
-  if (overriden) {  // already made the remark
-    return;
-  }
-  overriden = true;
-  std::cerr << "Overriding prototext params via command-line arguments\n";
-}
-
 bool ContamState::InitState(int r)
 {
   sim_id = getUniqStr(rank = r);
@@ -130,7 +143,6 @@ bool ContamState::InitState(int r)
 
   auto const ctm_proto = absl::GetFlag(FLAGS_ctm_proto);
   bool const ctm_verbose = absl::GetFlag(FLAGS_ctm_verbose);
-  bool overriden = false;
   if (!ctm_proto.empty()) {
     std::tie(contam_params, client_params) =
       read_proto_params(ctm_proto, ctm_verbose);
@@ -144,7 +156,6 @@ bool ContamState::InitState(int r)
   if (!prj_filename_tmp.empty()) {
     contam_params.prj_filename = prj_filename_tmp;
     if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
       cerr << "  Contam project file: " + contam_params.prj_filename << endl;
     }
   } else if (contam_params.prj_filename.empty()) {
@@ -154,123 +165,21 @@ bool ContamState::InitState(int r)
 
   dryrun = absl::GetFlag(FLAGS_ctm_dryrun);
 
-  absl::optional<bool> ctm_out = absl::GetFlag(FLAGS_ctm_out);
-  if (ctm_out.has_value()) {
-    client_params.of_out = ctm_out.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_out: "
-                + string(client_params.of_out ? "true\n" : "false\n");
-    }
-#endif
-  }
 
-  absl::optional<bool> ctm_err = absl::GetFlag(FLAGS_ctm_err);
-  if (ctm_err.has_value()) {
-    client_params.of_err = ctm_err.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_err: "
-                + string(client_params.of_err ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_ach = absl::GetFlag(FLAGS_ctm_ach);
-  if (ctm_ach.has_value()) {
-    client_params.of_ach = ctm_ach.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_ach: "
-                + string(client_params.of_ach ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_cex = absl::GetFlag(FLAGS_ctm_cex);
-  if (ctm_cex.has_value()) {
-    client_params.of_cex = ctm_cex.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_cex: "
-                + string(client_params.of_cex ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_csm = absl::GetFlag(FLAGS_ctm_csm);
-  if (ctm_csm.has_value()) {
-    client_params.of_csm = ctm_csm.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_csm: "
-                + string(client_params.of_csm ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_log = absl::GetFlag(FLAGS_ctm_log);
-  if (ctm_log.has_value()) {
-    client_params.of_log = ctm_log.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_log: "
-                + string(client_params.of_log ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_rst = absl::GetFlag(FLAGS_ctm_rst);
-  if (ctm_rst.has_value()) {
-    client_params.of_rst = ctm_rst.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_rst: "
-                + string(client_params.of_rst ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_sim = absl::GetFlag(FLAGS_ctm_sim);
-  if (ctm_sim.has_value()) {
-    client_params.of_sim = ctm_sim.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_sim: "
-                + string(client_params.of_sim ? "true\n" : "false\n");
-    }
-#endif
-  }
-
-  absl::optional<bool> ctm_xlog = absl::GetFlag(FLAGS_ctm_xlog);
-  if (ctm_xlog.has_value()) {
-    client_params.of_xlog = ctm_xlog.value();
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_xlog: "
-                + string(client_params.of_xlog ? "true\n" : "false\n");
-    }
-#endif
-  }
+  SET_CLIENT_PARAM(client_params, ctm_verbose, out);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, err);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, ach);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, cex);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, csm);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, log);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, rst);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, sim);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, xlog);
 
   auto const of_prefix_tmp = absl::GetFlag(FLAGS_ctm_of_prefix);
   if (!of_prefix_tmp.empty()) {
     client_params.of_prefix = of_prefix_tmp;
-#if defined(BUILD_DEBUG)
-    if (ctm_verbose) {
-      comment_on_overriden_params(overriden);
-      cerr << "  of_prefix: " + client_params.of_prefix << endl;
-    }
-#endif
+    comment_on_overriden_params(ctm_verbose, prefix, client_params.of_prefix);
   }
 
   std::string target_str = absl::GetFlag(FLAGS_ctm_target);
