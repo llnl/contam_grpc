@@ -43,9 +43,16 @@ bool canReadFile(const std::string& filename)
   return file.good();
 }
 
+bool hasPrefix(const std::string& str, const std::string& prefix)
+{
+  return (str.size() >= prefix.size()) &&
+         (str.compare(0, prefix.size(), prefix) == 0);
+}
+
 std::vector<std::string> filesWithExtension(
     const std::string& ext,
-    const std::string& dir)
+    const std::string& dir,
+    const std::string& prefix)
 {
   std::vector<std::string> result;
 
@@ -55,13 +62,15 @@ std::vector<std::string> filesWithExtension(
     return result;
   }
 
+  const std::string _ext = '.' + ext;
+
   for (const auto& entry : std::filesystem::directory_iterator(fdir))
   {
     if (entry.is_regular_file() &&
-        entry.path().extension() == ext)
+        entry.path().extension() == _ext)
     {
       const auto& fname = entry.path().filename().string();
-      if (canReadFile(fname)) {
+      if (hasPrefix(fname, prefix) && canReadFile(fdir.string() + fname)) {
         result.push_back(fname);
       }
     }
