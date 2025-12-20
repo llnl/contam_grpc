@@ -181,6 +181,8 @@ bool ContamState::InitState(int r)
     client_params.of_prefix = of_prefix_tmp;
     comment_on_overriden_params(ctm_verbose, prefix, client_params.of_prefix);
   }
+  auto& prefix = client_params.of_prefix;
+  prefix += ((!prefix.empty() && prefix.back() != '/') ? "/" : "");
 
   std::string target_str = absl::GetFlag(FLAGS_ctm_target);
 
@@ -317,12 +319,11 @@ ContamResponse runContamClient()
   // The actual RPC
   Status status = ctmState.stub_->RunContam(&context, request, &reply);
 
-  auto const& of_prefix = ctmState.client_params.of_prefix;
-  mkdir_as_needed(of_prefix.c_str());
-  auto const uniq_str =
-    of_prefix
-    + ((!of_prefix.empty() && of_prefix.back() != '/') ? "/ctm." : "ctm.")
-    + ctmState.sim_id + '.' + std::to_string(ctmState.sim_step);
+  auto prefix = ctmState.client_params.of_prefix
+                 + std::to_string(ctmState.sim_step) + "/";
+  mkdir_as_needed(prefix.c_str());
+/*
+  auto const uniq_str = prefix + "ctm." + ctmState.sim_id;
   std::cout << "Prefix of output files: " << uniq_str << std::endl;
 
   if (ctmState.client_params.of_out) {
@@ -363,6 +364,11 @@ ContamResponse runContamClient()
 
   if (reply.xlog().size() != 0ul) {
     writeFile(uniq_str + ".xlog", reply.xlog(), std::ios_base::app);
+  }
+*/
+
+  for (const auto &file : reply.files()) {
+    writeFile(prefix + file.filename(), file.data(), std::ios_base::app);
   }
 
   if (status.ok()) {

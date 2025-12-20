@@ -29,16 +29,13 @@ message ContamRequest {
   repeated contam.ambience.Contam_Ambience ambiences = 12; ///< Set of ambience timeseries
 }
 
+message File {
+  string filename = 1;
+  bytes data = 2;
+}
+
 // The response message from contam simulation service
 message ContamReply {
   string sim_id = 1;
-  bytes stdout = 2;
-  bytes stderr = 3;
-  bytes ach = 4;
-  bytes cex = 5;
-  bytes csm = 6;
-  bytes log = 7;
-  bytes rst = 8;
-  bytes sim = 9;
-  bytes xlog = 10;
+  repeated File files = 2;
 }
