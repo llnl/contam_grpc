@@ -19,13 +19,24 @@ message Sim_Params {
     bool of_out = 1; ///< Whether to write stdout from Contam server into a file
     bool of_err = 2; ///< Whether to write stderr from Contam server into a file
     bool of_ach = 3; ///< Whether to retrieve .ach output file from Contam server
-    bool of_cex = 4; ///< Whether to retrieve .cex output file from Contam server
-    bool of_csm = 5; ///< Whether to retrieve .csm output file from Contam server
-    bool of_log = 6; ///< Whether to retrieve .log output file from Contam server
-    bool of_rst = 7; ///< Whether to retrieve .rst output file from Contam server
-    bool of_sim = 8; ///< Whether to retrieve .sim output file from Contam server
-    bool of_xlog = 9; ///< Whether to retrieve .xlog output file from Contam server
-    string of_prefix = 10; ///< prefix path to the contam output files
+    bool of_age = 4; ///< Whether to retrieve .age output file from Contam server
+    bool of_bal = 5; ///< Whether to retrieve .bal output file from Contam server
+    bool of_cbw = 6; ///< Whether to retrieve .cbw output file from Contam server
+    bool of_cex = 7; ///< Whether to retrieve .cex output file from Contam server
+    bool of_csm = 8; ///< Whether to retrieve .csm output file from Contam server
+    bool of_ebw = 9; ///< Whether to retrieve .ebw output file from Contam server
+    bool of_log = 10; ///< Whether to retrieve .log output file from Contam server
+    bool of_rst = 11; ///< Whether to retrieve .rst output file from Contam server
+    bool of_rxr = 12; ///< Whether to retrieve .rxr output file from Contam server
+    bool of_rzf = 13; ///< Whether to retrieve .rzf output file from Contam server
+    bool of_rzm = 14; ///< Whether to retrieve .rzm output file from Contam server
+    bool of_rzi = 15; ///< Whether to retrieve .rzi output file from Contam server
+    bool of_sim = 16; ///< Whether to retrieve .sim output file from Contam server
+    bool of_sqlite3 = 17; ///< Whether to retrieve .sqlite3 output file from Contam server
+    bool of_srf = 18; ///< Whether to retrieve .srf output file from Contam server
+    bool of_val = 19; ///< Whether to retrieve .val output file from Contam server
+    bool of_xlog = 20; ///< Whether to retrieve .xlog output file from Contam server
+    string of_prefix = 21; ///< prefix path to the contam output files
   }
 
   Contam_Params contam_params = 1;

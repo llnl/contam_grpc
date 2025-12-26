@@ -30,11 +30,22 @@ client_params {
   of_out: true
   of_err: true
   of_ach: true
+  of_age: true
+  of_bal: true
+  of_cbw: true
   of_cex: true
   of_csm: true
+  of_ebw: true
   of_log: true
   of_rst: true
+  of_rxr: true
+  of_rzf: true
+  of_rzm: true
+  of_rzi: true
   of_sim: true
+  of_sqlite3: true
+  of_srf: true
+  of_val: true
   of_xlog: true
   of_prefix: "ctm"
 }

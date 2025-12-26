@@ -72,11 +72,22 @@ Optionally, the following options can be used
   - `--ctm_out=<true|false>` : The default is false. Write stdout from the server to .out file.
   - `--ctm_err=<true|false>` : The default is false. Write stderr from the server to .err file.
   - `--ctm_ach=<true|false>` : The default is false. Tells the server to return .ach output file.
+  - `--ctm_age=<true|false>` : The default is false. Tells the server to return .age output file.
+  - `--ctm_bal=<true|false>` : The default is false. Tells the server to return .bal output file.
+  - `--ctm_cbw=<true|false>` : The default is false. Tells the server to return .cbw output file.
   - `--ctm_cex=<true|false>` : The default is false. Tells the server to return .cex output file.
   - `--ctm_csm=<true|false>` : The default is false. Tells the server to return .csm output file.
+  - `--ctm_ebw=<true|false>` : The default is false. Tells the server to return .ebw output file.
   - `--ctm_log=<true|false>` : The default is false. Tells the server to return .log output file.
   - `--ctm_rst=<true|false>` : The default is false. Tells the server to return .rst output file.
+  - `--ctm_rxr=<true|false>` : The default is false. Tells the server to return .rxr output file.
+  - `--ctm_rzf=<true|false>` : The default is false. Tells the server to return .rzf output file.
+  - `--ctm_rzm=<true|false>` : The default is false. Tells the server to return .rzm output file.
+  - `--ctm_rzi=<true|false>` : The default is false. Tells the server to return .rzi output file.
   - `--ctm_sim=<true|false>` : The default is false. Tells the server to return .sim output file.
+  - `--ctm_sqlite3=<true|false>` : The default is false. Tells the server to return .sqlite3 output file.
+  - `--ctm_srf=<true|false>` : The default is false. Tells the server to return .srf output file.
+  - `--ctm_val=<true|false>` : The default is false. Tells the server to return .val output file.
   - `--ctm_xlog=<true|false>` : The default is false. Tells the server to return .xlog output file.
   - `--ctm_verbose=<true|false>` : vebose reporting
   - `--ctm_proto=<prototext file>` : This file corresponds to the `proto/contam_params.proto`,
@@ -88,7 +99,7 @@ Optionally, the following options can be used
 ## RPC API
 - `proto/contam.proto` defines RPC API for both server and client.
 - client packs `*.prj` file into a message sent to a server.
-- client also indicates if it wishes to receive each of contam output files: `*.ach`, `*.cex`, `*.csm`, `*.log`, `*.rst`, `*.sim`, and `*.xlog`.
+- client also indicates if it wishes to receive each of contam output files: `*.ach`, `*.age`, `*.bal`, `*.cbw`, `*.cex`, `*.csm`, `*.ebw`, `*.log`, `*.rst`, `*.rxr`, `*.rzf`, `*.rzm`, `*.rzi`, `*.sim`, `*.sqlite3`, `*.srf`, `*.val`, and `*.xlog`.
 - server packs each of requested output files into a message and returns it to the client.
 
 

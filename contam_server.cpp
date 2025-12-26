@@ -38,7 +38,8 @@ ABSL_FLAG(std::string,
 namespace Contam_gRPC {
 
 /** Compare the first 'prefix.size()' characters of 'str' with 'prefix' */
-bool has_prefix(const std::string& str, const std::string& prefix) {
+bool has_prefix(std::string const& str, std::string const& prefix)
+{
   if (str.size() >= prefix.size()) {
     return (str.compare(0, prefix.size(), prefix) == 0);
   }
@@ -48,7 +49,7 @@ bool has_prefix(const std::string& str, const std::string& prefix) {
 #if defined(BUILD_DEBUG)
 #define NOTICE_ON_PACKED_FILE(verbose, request, ext)                           \
   if (verbose) {                                                               \
-    const auto sim_id = (request)->sim_id().c_str();                           \
+    auto const sim_id = (request)->sim_id().c_str();                           \
     printf("------ %s packed for simulation (%s) !\n", ext, sim_id);           \
   }
 #else
@@ -57,18 +58,20 @@ bool has_prefix(const std::string& str, const std::string& prefix) {
 
 #define SET_FILE_REPLY(reply, verbose, request, prefix, fname, ext)            \
   do {                                                                         \
-      auto const content = loadFile(prefix + fname);                           \
-      contam::rpc::File* file = (reply)->add_files();                          \
-      file->set_filename(fname);                                               \
-      file->set_data(content.data(), content.size());                          \
-      if (file->data().size() != content.size()) {                             \
-        printf("incorrect length of packed field (%s): %lu -> %lu\n",          \
-               ext, content.size(), file->data().size());                      \
-      } else if (content.size() == 0ul) {                                      \
-        printf("(%s) is empty\n", ext);                                        \
-      } else {                                                                 \
-        NOTICE_ON_PACKED_FILE((verbose), (request), ext)                       \
-      }                                                                        \
+    auto const content = loadFile(prefix + fname);                             \
+    contam::rpc::File* file = (reply)->add_files();                            \
+    file->set_filename(fname);                                                 \
+    file->set_data(content.data(), content.size());                            \
+    if (file->data().size() != content.size()) {                               \
+      printf("incorrect length of packed field (%s): %lu -> %lu\n",            \
+             ext,                                                              \
+             content.size(),                                                   \
+             file->data().size());                                             \
+    } else if (content.size() == 0ul) {                                        \
+      printf("(%s) is empty\n", ext);                                          \
+    } else {                                                                   \
+      NOTICE_ON_PACKED_FILE((verbose), (request), ext)                         \
+    }                                                                          \
   } while (0)
 
 #define LOAD_AND_DEL_STDFILE(request, reply, verbose, prefix, uniq_str, _ext_) \
@@ -80,17 +83,16 @@ bool has_prefix(const std::string& str, const std::string& prefix) {
 
 #define LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, _ext_)    \
   do {                                                                         \
-    const auto flist = filesWithExtension(#_ext_, (prefix), (uniq_str));       \
+    auto const flist = filesWithExtension(#_ext_, (prefix), (uniq_str));       \
     if ((request)->_ext_()) {                                                  \
-      for (const auto& fn: flist) {                                            \
+      for (auto const& fn : flist) {                                           \
         SET_FILE_REPLY((reply), (verbose), (request), (prefix), fn, #_ext_);   \
       }                                                                        \
     }                                                                          \
-    for (const auto& fn: flist) {                                              \
+    for (auto const& fn : flist) {                                             \
       unlink(fn.c_str());                                                      \
     }                                                                          \
   } while (0)
-
 
 bool set_ambience(
   std::vector<AmbienceData>& ambiences,
@@ -237,17 +239,29 @@ Status ContamServerServiceImpl::RunContam(ServerContext* context,
   LOAD_AND_DEL_STDFILE(request, reply, verbose, prefix, uniq_str, out);
   LOAD_AND_DEL_STDFILE(request, reply, verbose, prefix, uniq_str, err);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, ach);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, age);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, bal);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, cbw);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, cex);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, csm);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, ebw);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, log);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, rst);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, rxr);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, rzf);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, rzm);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, rzi);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, sim);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, sqlite3);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, srf);
+  LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, val);
   LOAD_AND_DEL_FILE(request, reply, verbose, prefix, uniq_str, xlog);
 
   if (verbose) {
     printf("------ Packed response of simulation (%s) "
            "into a %lu byte-long message!\n",
-           request->sim_id().c_str(), reply->ByteSizeLong());
+           request->sim_id().c_str(),
+           reply->ByteSizeLong());
   }
 
   std::fflush(stdout);

@@ -16,17 +16,16 @@ std::string addStrToFilenameBeforeExt(std::string const& filename,
                                       std::string const& str);
 
 /*! \brief Check if a file can be read */
-bool canReadFile(const std::string& filename);
+bool canReadFile(std::string const& filename);
 
 /** Compare the first 'prefix.size()' characters of 'str' with 'prefix' */
-bool hasPrefix(const std::string& str, const std::string& prefix);
+bool hasPrefix(std::string const& str, std::string const& prefix);
 
 /*! \brief Return the names of files with a specific
     extension under a directory */
-std::vector<std::string> filesWithExtension(
-    const std::string& ext,
-    const std::string& dir = "./",
-    const std::string& prefix = "");
+std::vector<std::string> filesWithExtension(std::string const& ext,
+                                            std::string const& dir = "./",
+                                            std::string const& prefix = "");
 
 /*! \brief Load a file into a vector of characters */
 std::vector<char> loadFile(std::string const& fname);

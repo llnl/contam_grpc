@@ -51,14 +51,29 @@ void ClientParams::clear()
   of_out = false;
   of_err = false;
   of_ach = false;
+  of_age = false;
+  of_bal = false;
+  of_cbw = false;
   of_cex = false;
   of_csm = false;
+  of_ebw = false;
   of_log = false;
   of_rst = false;
+  of_rxr = false;
+  of_rzf = false;
+  of_rzm = false;
+  of_rzi = false;
   of_sim = false;
+  of_sqlite3 = false;
+  of_srf = false;
+  of_val = false;
   of_xlog = false;
   of_prefix.clear();
 }
+
+#define ADD_CP_PRINT_STR(_PARAM_)                                              \
+  +"of_"##_PARAM_ ": " + string(of_ #_PARAM_ ? "true\n" : "false\n")           \
+    + str_indent_inner
 
 std::string ClientParams::to_string(unsigned indent) const
 {
@@ -71,13 +86,24 @@ std::string ClientParams::to_string(unsigned indent) const
     + "of_out: " + string(of_out ? "true\n" : "false\n") + str_indent_inner
     + "of_err: " + string(of_err ? "true\n" : "false\n") + str_indent_inner
     + "of_ach: " + string(of_ach ? "true\n" : "false\n") + str_indent_inner
+    + "of_age: " + string(of_age ? "true\n" : "false\n") + str_indent_inner
+    + "of_bal: " + string(of_bal ? "true\n" : "false\n") + str_indent_inner
+    + "of_cbw: " + string(of_cbw ? "true\n" : "false\n") + str_indent_inner
     + "of_cex: " + string(of_cex ? "true\n" : "false\n") + str_indent_inner
     + "of_csm: " + string(of_csm ? "true\n" : "false\n") + str_indent_inner
+    + "of_ebw: " + string(of_ebw ? "true\n" : "false\n") + str_indent_inner
     + "of_log: " + string(of_log ? "true\n" : "false\n") + str_indent_inner
     + "of_rst: " + string(of_rst ? "true\n" : "false\n") + str_indent_inner
+    + "of_rxr: " + string(of_rxr ? "true\n" : "false\n") + str_indent_inner
+    + "of_rzf: " + string(of_rzf ? "true\n" : "false\n") + str_indent_inner
+    + "of_rzm: " + string(of_rzm ? "true\n" : "false\n") + str_indent_inner
+    + "of_rzi: " + string(of_rzi ? "true\n" : "false\n") + str_indent_inner
     + "of_sim: " + string(of_sim ? "true\n" : "false\n") + str_indent_inner
-    + "of_xlog: " + string(of_xlog ? "true\n" : "false\n") + str_indent_inner
-    + "of_prefix: " + of_prefix + "\n" + str_indent + "}";
+    + "of_sqlite3: " + string(of_sqlite3 ? "true\n" : "false\n")
+    + str_indent_inner + "of_srf: " + string(of_srf ? "true\n" : "false\n")
+    + str_indent_inner + "of_val: " + string(of_val ? "true\n" : "false\n")
+    + str_indent_inner + "of_xlog: " + string(of_xlog ? "true\n" : "false\n")
+    + str_indent_inner + "of_prefix: " + of_prefix + "\n" + str_indent + "}";
   return str;
 }
 
@@ -209,11 +235,22 @@ static void set_client_options(Client_Params const& cfg,
   cp.of_out = cfg.of_out();
   cp.of_err = cfg.of_err();
   cp.of_ach = cfg.of_ach();
+  cp.of_age = cfg.of_age();
+  cp.of_bal = cfg.of_bal();
+  cp.of_cbw = cfg.of_cbw();
   cp.of_cex = cfg.of_cex();
   cp.of_csm = cfg.of_csm();
+  cp.of_ebw = cfg.of_ebw();
   cp.of_log = cfg.of_log();
   cp.of_rst = cfg.of_rst();
+  cp.of_rxr = cfg.of_rxr();
+  cp.of_rzf = cfg.of_rzf();
+  cp.of_rzm = cfg.of_rzm();
+  cp.of_rzi = cfg.of_rzi();
   cp.of_sim = cfg.of_sim();
+  cp.of_sqlite3 = cfg.of_sqlite3();
+  cp.of_srf = cfg.of_srf();
+  cp.of_val = cfg.of_val();
   cp.of_xlog = cfg.of_xlog();
   cp.of_prefix = cfg.of_prefix();
 

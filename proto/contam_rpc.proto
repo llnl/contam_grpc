@@ -17,16 +17,33 @@ service ContamServer {
 message ContamRequest {
   string sim_id = 1;
   uint32 sim_step = 2;
-  bytes prj = 3;
+  uint32 wp_wo_envelope = 3;
+
+  // whether to retrieve the result files of each filename extension
   bool ach = 4;
-  bool cex = 5;
-  bool csm = 6;
-  bool log = 7;
-  bool rst = 8;
-  bool sim = 9;
-  bool xlog = 10;
-  uint32 wp_wo_envelope = 11;
-  repeated contam.ambience.Contam_Ambience ambiences = 12; ///< Set of ambience timeseries
+  bool age = 5;
+  bool bal = 6;
+  bool cbw = 7;
+  bool cex = 8;
+  bool csm = 9;
+  bool ebw = 10;
+  bool log = 11;
+  bool rst = 12;
+  bool rxr = 13;
+  bool rzf = 14;
+  bool rzm = 15;
+  bool rzi = 16;
+  bool sim = 17;
+  bool sqlite3 = 18;
+  bool srf = 19;
+  bool val = 20;
+  bool xlog = 21;
+
+  // Content of the simulation input file
+  bytes prj = 22;
+
+  // Set of ambience timeseries. This carries the data for WTH, CTM or WPC files
+  repeated contam.ambience.Contam_Ambience ambiences = 23;
 }
 
 message File {

@@ -42,6 +42,18 @@ ABSL_FLAG(absl::optional<bool>,
           absl::nullopt,
           "Retrieve .ach output file from Contam server");
 ABSL_FLAG(absl::optional<bool>,
+          ctm_age,
+          absl::nullopt,
+          "Retrieve .age output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_bal,
+          absl::nullopt,
+          "Retrieve .bal output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_cbw,
+          absl::nullopt,
+          "Retrieve .cbw output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
           ctm_cex,
           absl::nullopt,
           "Retrieve .cex output file from Contam server");
@@ -49,6 +61,10 @@ ABSL_FLAG(absl::optional<bool>,
           ctm_csm,
           absl::nullopt,
           "Retrieve .csm output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_ebw,
+          absl::nullopt,
+          "Retrieve .ebw output file from Contam server");
 ABSL_FLAG(absl::optional<bool>,
           ctm_log,
           absl::nullopt,
@@ -58,9 +74,37 @@ ABSL_FLAG(absl::optional<bool>,
           absl::nullopt,
           "Retrieve .rst output file from Contam server");
 ABSL_FLAG(absl::optional<bool>,
+          ctm_rxr,
+          absl::nullopt,
+          "Retrieve .rxr output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_rzf,
+          absl::nullopt,
+          "Retrieve .rzf output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_rzm,
+          absl::nullopt,
+          "Retrieve .rzm output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_rzi,
+          absl::nullopt,
+          "Retrieve .rzi output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
           ctm_sim,
           absl::nullopt,
           "Retrieve .sim output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_sqlite3,
+          absl::nullopt,
+          "Retrieve .sqlite3 output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_srf,
+          absl::nullopt,
+          "Retrieve .srf output file from Contam server");
+ABSL_FLAG(absl::optional<bool>,
+          ctm_val,
+          absl::nullopt,
+          "Retrieve .val output file from Contam server");
 ABSL_FLAG(absl::optional<bool>,
           ctm_xlog,
           absl::nullopt,
@@ -81,26 +125,27 @@ using grpc::Status;
 namespace Contam_gRPC {
 
 #if defined(BUILD_DEBUG)
-  #define comment_on_overriden_params(verbose, _param_, value) do {        \
-    if (verbose) {                                                         \
-      using namespace std;                                                 \
-      cerr << "Overriding prototext param by cmd arg: of_" #_param_ " = "  \
-           << (value) << endl;                                             \
-    }                                                                      \
-  } while(0)
+#define comment_on_overriden_params(verbose, _param_, value)                   \
+  do {                                                                         \
+    if (verbose) {                                                             \
+      using namespace std;                                                     \
+      cerr << "Overriding prototext param by cmd arg: of_" #_param_ " = "      \
+           << (value) << endl;                                                 \
+    }                                                                          \
+  } while (0)
 #else
-  #define comment_on_overriden_params(verbose, _param_, value)
+#define comment_on_overriden_params(verbose, _param_, value)
 #endif
 
-#define SET_CLIENT_PARAM(client_params, verbose, _param_) do {          \
-  absl::optional<bool> opt = absl::GetFlag(FLAGS_ctm_##_param_);        \
-  if (opt.has_value()) {                                                \
-    (client_params).of_##_param_ = opt.value();                         \
-    comment_on_overriden_params(verbose, _param_,                       \
-                                string(opt.value()? "true" : "false")); \
-  }                                                                     \
-} while(0)
-
+#define SET_CLIENT_PARAM(client_params, verbose, _param_)                      \
+  do {                                                                         \
+    absl::optional<bool> opt = absl::GetFlag(FLAGS_ctm_##_param_);             \
+    if (opt.has_value()) {                                                     \
+      (client_params).of_##_param_ = opt.value();                              \
+      comment_on_overriden_params(                                             \
+        verbose, _param_, string(opt.value() ? "true" : "false"));             \
+    }                                                                          \
+  } while (0)
 
 struct ContamState {
   std::string sim_id;
@@ -165,15 +210,25 @@ bool ContamState::InitState(int r)
 
   dryrun = absl::GetFlag(FLAGS_ctm_dryrun);
 
-
   SET_CLIENT_PARAM(client_params, ctm_verbose, out);
   SET_CLIENT_PARAM(client_params, ctm_verbose, err);
   SET_CLIENT_PARAM(client_params, ctm_verbose, ach);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, age);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, bal);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, cbw);
   SET_CLIENT_PARAM(client_params, ctm_verbose, cex);
   SET_CLIENT_PARAM(client_params, ctm_verbose, csm);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, ebw);
   SET_CLIENT_PARAM(client_params, ctm_verbose, log);
   SET_CLIENT_PARAM(client_params, ctm_verbose, rst);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, rxr);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, rzf);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, rzm);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, rzi);
   SET_CLIENT_PARAM(client_params, ctm_verbose, sim);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, sqlite3);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, srf);
+  SET_CLIENT_PARAM(client_params, ctm_verbose, val);
   SET_CLIENT_PARAM(client_params, ctm_verbose, xlog);
 
   auto const of_prefix_tmp = absl::GetFlag(FLAGS_ctm_of_prefix);
@@ -290,11 +345,22 @@ ContamResponse runContamClient()
   request.set_sim_id(ctmState.sim_id);
   request.set_prj(prj.data(), prj.size());
   request.set_ach(ctmState.client_params.of_ach);
+  request.set_ach(ctmState.client_params.of_age);
+  request.set_ach(ctmState.client_params.of_bal);
+  request.set_ach(ctmState.client_params.of_cbw);
   request.set_cex(ctmState.client_params.of_cex);
   request.set_csm(ctmState.client_params.of_csm);
+  request.set_ach(ctmState.client_params.of_ebw);
   request.set_log(ctmState.client_params.of_log);
   request.set_rst(ctmState.client_params.of_rst);
+  request.set_rst(ctmState.client_params.of_rxr);
+  request.set_rst(ctmState.client_params.of_rzf);
+  request.set_rst(ctmState.client_params.of_rzm);
+  request.set_rst(ctmState.client_params.of_rzi);
   request.set_sim(ctmState.client_params.of_sim);
+  request.set_sim(ctmState.client_params.of_sqlite3);
+  request.set_sim(ctmState.client_params.of_srf);
+  request.set_sim(ctmState.client_params.of_val);
   request.set_xlog(ctmState.client_params.of_xlog);
   request.set_wp_wo_envelope(ctmState.contam_params.wp_wo_envelope);
 
@@ -319,55 +385,11 @@ ContamResponse runContamClient()
   // The actual RPC
   Status status = ctmState.stub_->RunContam(&context, request, &reply);
 
-  auto prefix = ctmState.client_params.of_prefix
-                 + std::to_string(ctmState.sim_step) + "/";
+  auto prefix =
+    ctmState.client_params.of_prefix + std::to_string(ctmState.sim_step) + "/";
   mkdir_as_needed(prefix.c_str());
-/*
-  auto const uniq_str = prefix + "ctm." + ctmState.sim_id;
-  std::cout << "Prefix of output files: " << uniq_str << std::endl;
 
-  if (ctmState.client_params.of_out) {
-    writeFile(uniq_str + ".out", reply.stdout(), std::ios_base::app);
-  } else {
-    std::cout << reply.stdout() << std::endl;
-  }
-
-  if (ctmState.client_params.of_err) {
-    writeFile(uniq_str + ".err", reply.stderr(), std::ios_base::app);
-  } else {
-    std::cerr << reply.stderr() << std::endl;
-  }
-
-  if (reply.ach().size() != 0ul) {
-    writeFile(uniq_str + ".ach", reply.ach(), std::ios_base::app);
-  }
-
-  if (reply.cex().size() != 0ul) {
-    writeFile(uniq_str + ".cex", reply.cex(), std::ios_base::app);
-  }
-
-  if (reply.csm().size() != 0ul) {
-    writeFile(uniq_str + ".csm", reply.csm(), std::ios_base::app);
-  }
-
-  if (reply.log().size() != 0ul) {
-    writeFile(uniq_str + ".log", reply.log(), std::ios_base::app);
-  }
-
-  if (reply.rst().size() != 0ul) {
-    writeFile(uniq_str + ".rst", reply.rst(), std::ios_base::app);
-  }
-
-  if (reply.sim().size() != 0ul) {
-    writeFile(uniq_str + ".sim", reply.sim(), std::ios_base::app);
-  }
-
-  if (reply.xlog().size() != 0ul) {
-    writeFile(uniq_str + ".xlog", reply.xlog(), std::ios_base::app);
-  }
-*/
-
-  for (const auto &file : reply.files()) {
+  for (auto const& file : reply.files()) {
     writeFile(prefix + file.filename(), file.data(), std::ios_base::app);
   }
 

@@ -1,8 +1,8 @@
 #include "utils.h"
 
 #include <algorithm>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <sstream>
 #ifdef __linux__
@@ -37,26 +37,25 @@ bool checkFilename(std::string const& filename)
   return true;
 }
 
-bool canReadFile(const std::string& filename)
+bool canReadFile(std::string const& filename)
 {
   std::ifstream file(filename);
   return file.good();
 }
 
-bool hasPrefix(const std::string& str, const std::string& prefix)
+bool hasPrefix(std::string const& str, std::string const& prefix)
 {
-  return (str.size() >= prefix.size()) &&
-         (str.compare(0, prefix.size(), prefix) == 0);
+  return (str.size() >= prefix.size())
+         && (str.compare(0, prefix.size(), prefix) == 0);
 }
 
-std::vector<std::string> filesWithExtension(
-    const std::string& ext,
-    const std::string& dir,
-    const std::string& prefix)
+std::vector<std::string> filesWithExtension(std::string const& ext,
+                                            std::string const& dir,
+                                            std::string const& prefix)
 {
   std::vector<std::string> result;
 
-  const std::filesystem::path& fdir = dir;
+  std::filesystem::path const& fdir = dir;
 
   if (!std::filesystem::exists(fdir) || !std::filesystem::is_directory(fdir)) {
     return result;
@@ -64,12 +63,9 @@ std::vector<std::string> filesWithExtension(
 
   const std::string _ext = '.' + ext;
 
-  for (const auto& entry : std::filesystem::directory_iterator(fdir))
-  {
-    if (entry.is_regular_file() &&
-        entry.path().extension() == _ext)
-    {
-      const auto& fname = entry.path().filename().string();
+  for (auto const& entry : std::filesystem::directory_iterator(fdir)) {
+    if (entry.is_regular_file() && entry.path().extension() == _ext) {
+      auto const& fname = entry.path().filename().string();
       if (hasPrefix(fname, prefix) && canReadFile(fdir.string() + fname)) {
         result.push_back(fname);
       }
