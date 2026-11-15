@@ -1,3 +1,8 @@
+# Copyright 2026 Lawrence Livermore National Security, LLC.
+# See the top-level LICENSE file for details.
+#
+# SPDX-License-Identifier: BSD-3
+
 
 if (NOT DEFINED ENV{CONTAM_LIB_DIR} OR "$ENV{CONTAM_LIB_DIR}" STREQUAL "")
   message(FATAL_ERROR "Env var CONTAM_LIB_DIR for contamx-lib path is not defined!")

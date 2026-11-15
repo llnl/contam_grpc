@@ -1,3 +1,10 @@
+/*
+ * Copyright 2026 Lawrence Livermore National Security, LLC.
+ * See the top-level LICENSE file for details.
+
+ * SPDX-License-Identifier: BSD-3
+ */
+
 /** @file cxLibDriver_testOneZoneWthCtm.c
  *  @example cxLibDriver_testOneZoneWthCtm.c
  *  @brief contam-x-cosim API driver for test case: \b

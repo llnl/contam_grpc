@@ -1,4 +1,4 @@
-# Contam simulation server (contam\_grpc)
+# A gRPC-based client-server wrapper API for ContamX simulator (ContamX-RPC) (contam\_grpc)
 
 Contam simulation server takes a contam project file (`*.prj`) via RPC from a client, runs the simulation defined in the project file, and returns the result.
 The results are a group of files generated as a result of running a simulation as well as `stdout` and `stderr`.
@@ -156,5 +156,13 @@ Run clang-format before commiting.
 
 Please make sure to update tests as appropriate.
 
+## Contributors
+Jae-Seung Yeom
+Ali Navid
+William Stuart Dols
+
+
 ## License
-Unpublished
+SPDX-License-Identifier: BSD-3
+
+LLNL-CODE-2026908

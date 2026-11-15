@@ -1,3 +1,10 @@
+/*
+ * Copyright 2026 Lawrence Livermore National Security, LLC.
+ * See the top-level LICENSE file for details.
+
+ * SPDX-License-Identifier: BSD-3
+ */
+
 #ifndef CONTAM_GRPC_CONTAM_DRIVER_H
 #define CONTAM_GRPC_CONTAM_DRIVER_H
 #include <string>

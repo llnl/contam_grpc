@@ -1,3 +1,8 @@
+# Copyright 2026 Lawrence Livermore National Security, LLC.
+# See the top-level LICENSE file for details.
+#
+# SPDX-License-Identifier: BSD-3
+
 cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)

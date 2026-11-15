@@ -1,3 +1,10 @@
+/*
+ * Copyright 2026 Lawrence Livermore National Security, LLC.
+ * See the top-level LICENSE file for details.
+
+ * SPDX-License-Identifier: BSD-3
+ */
+
 /*! @file contam_ambience.cpp
  * \brief Contam ambience data struct and manager
  */

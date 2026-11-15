@@ -1,3 +1,8 @@
+# Copyright 2026 Lawrence Livermore National Security, LLC.
+# See the top-level LICENSE file for details.
+#
+# SPDX-License-Identifier: BSD-3
+
 # The schema of this prototext file is defined in 'contam_params.proto'
 # The command-line option takes higher precedence when a same variable
 # is specified by both ia prototext file and a cmd-line option.
